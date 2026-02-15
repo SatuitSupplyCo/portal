@@ -1,0 +1,548 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THE CALIBRATED DEPOT — Product Section
+   Architectural Precision · CAD Wireframe · Supply Manifest
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ──────────────────────────────────────────────── */
+
+:root {
+  /* Ink — Navy-Black hierarchy */
+  --depot-ink: #0f1a2e;          /* Deep Navy — primary text */
+  --depot-ink-light: #2c3e5a;    /* Lighter navy — secondary text */
+  --depot-muted: #6b7a8d;        /* Slate — tertiary / labels */
+  --depot-faint: #b0bac7;        /* Faded steel — dim metadata */
+  --depot-hairline: #d4dbe4;     /* Pale — dimension lines, borders */
+  --depot-border: #e2e8f0;       /* Container borders */
+  --depot-surface: #ffffff;      /* White ground */
+  --depot-surface-alt: #f7f9fb;  /* Off-white hover */
+  --depot-crosshair: #c5cdd8;    /* Crosshair marks */
+  --depot-accent: #0f1a2e;       /* Accent IS the ink — weight does the work */
+
+  /* Font stack */
+  --depot-font: var(--font-montserrat), "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Base typography ────────────────────────────────────────────── */
+
+.depot-heading {
+  font-family: var(--depot-font);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--depot-ink);
+}
+
+.depot-subheading {
+  font-family: var(--depot-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--depot-ink);
+}
+
+.depot-label {
+  font-family: var(--depot-font);
+  font-weight: 700;
+  font-size: 0.5625rem;       /* 9px */
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--depot-muted);
+}
+
+.depot-data {
+  font-family: var(--depot-font);
+  font-weight: 300;
+  color: var(--depot-ink-light);
+}
+
+.depot-data-strong {
+  font-family: var(--depot-font);
+  font-weight: 500;
+  color: var(--depot-ink);
+}
+
+/* ─── Crosshairs — precision markers ─────────────────────────────── */
+/* Subtle + marks in corners of containers                            */
+
+.crosshair-container {
+  position: relative;
+}
+
+.crosshair-container::before,
+.crosshair-container::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Top-left crosshair */
+.crosshair-container::before {
+  top: 8px;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border: none;
+  background:
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 1px 100% no-repeat,
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 100% 1px no-repeat;
+}
+
+/* Bottom-right crosshair */
+.crosshair-container::after {
+  bottom: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  background:
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 1px 100% no-repeat,
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 100% 1px no-repeat;
+}
+
+/* Four-corner variant */
+.crosshair-all {
+  position: relative;
+}
+
+.crosshair-all .crosshair-tl,
+.crosshair-all .crosshair-tr,
+.crosshair-all .crosshair-bl,
+.crosshair-all .crosshair-br {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 1px 100% no-repeat,
+    linear-gradient(var(--depot-crosshair), var(--depot-crosshair)) center / 100% 1px no-repeat;
+}
+
+.crosshair-all .crosshair-tl { top: 6px; left: 6px; }
+.crosshair-all .crosshair-tr { top: 6px; right: 6px; }
+.crosshair-all .crosshair-bl { bottom: 6px; left: 6px; }
+.crosshair-all .crosshair-br { bottom: 6px; right: 6px; }
+
+/* ─── Dimension Lines — CAD callout system ───────────────────────── */
+
+.dimension-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The leader line itself */
+.dimension-line::before {
+  content: "";
+  flex-shrink: 0;
+  width: 20px;
+  height: 0;
+  border-top: 1px solid var(--depot-hairline);
+  position: relative;
+}
+
+/* Terminal tick — dot variant */
+.dimension-line::before {
+  background: radial-gradient(circle 2px at 0% 50%, var(--depot-hairline) 2px, transparent 2px);
+}
+
+/* Horizontal rule used as a spec-line between sections */
+.spec-rule {
+  border: none;
+  height: 0;
+  border-top: 1px solid var(--depot-hairline);
+  margin: 0;
+}
+
+/* Dashed spec rule variant */
+.spec-rule-dashed {
+  border: none;
+  height: 0;
+  border-top: 1px dashed var(--depot-hairline);
+  margin: 0;
+}
+
+/* ─── Sidebar — Calibrated Depot ─────────────────────────────────── */
+
+.product-sidebar {
+  background: var(--depot-surface);
+  border-right: 1px solid var(--depot-border);
+  font-family: var(--depot-font);
+}
+
+/* ─── Tab bar ─────────────────────────────────────────────────────── */
+
+.product-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--depot-border);
+}
+
+.product-tab {
+  padding: 10px 16px;
+  font-family: var(--depot-font);
+  font-size: 0.625rem;         /* 10px */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--depot-faint);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.product-tab:hover {
+  color: var(--depot-ink);
+}
+
+.product-tab[data-active="true"] {
+  color: var(--depot-ink);
+  border-bottom-color: var(--depot-ink);
+}
+
+/* ─── Manifest row — data-first garment list ─────────────────────── */
+
+.manifest-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--depot-border);
+  cursor: pointer;
+  transition: background-color 0.1s;
+  font-family: var(--depot-font);
+}
+
+.manifest-row:hover {
+  background-color: var(--depot-surface-alt);
+}
+
+.manifest-row[data-selected="true"] {
+  background-color: var(--depot-surface-alt);
+}
+
+/* Manifest name column */
+.manifest-name {
+  font-weight: 600;
+  font-size: 0.8125rem;       /* 13px */
+  letter-spacing: 0.04em;
+  color: var(--depot-ink);
+  text-transform: uppercase;
+}
+
+/* Manifest SKU column */
+.manifest-sku {
+  font-weight: 300;
+  font-size: 0.6875rem;       /* 11px */
+  letter-spacing: 0.06em;
+  color: var(--depot-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Manifest status indicator */
+.manifest-status {
+  font-weight: 700;
+  font-size: 0.5625rem;       /* 9px */
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 3px 10px;
+  border: 1px solid var(--depot-hairline);
+}
+
+.manifest-status[data-status="live"] {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.manifest-status[data-status="sampling"] {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.manifest-status[data-status="production"] {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+/* ─── Manifest header row ────────────────────────────────────────── */
+
+.manifest-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 0 0 10px 0;
+  border-bottom: 1px solid var(--depot-ink);
+}
+
+.manifest-header span {
+  font-family: var(--depot-font);
+  font-weight: 700;
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--depot-muted);
+}
+
+/* ─── Flat thumbnail (in manifest context) ───────────────────────── */
+
+.flat-thumbnail {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  background: var(--depot-surface);
+  border: 1px solid var(--depot-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Micro crosshairs on thumbnail */
+.flat-thumbnail::before {
+  content: "+";
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 6px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  pointer-events: none;
+  font-family: monospace;
+}
+
+.flat-thumbnail::after {
+  content: "+";
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 6px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  pointer-events: none;
+  font-family: monospace;
+}
+
+.flat-thumbnail-svg {
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+}
+
+/* Thumbnail layer visibility is handled by InlineSvg's hideLayers
+   prop (DOM removal), which is more reliable than CSS for scoped
+   inline SVGs. These rules act as a safety net. */
+.flat-thumbnail [id*="GRID"] {
+  display: none !important;
+}
+
+.flat-thumbnail [id*="ANNOTATION"] {
+  display: none !important;
+}
+
+/* The .outline class carries fill:#fff for the garment silhouette in
+   OUTLINE_MAIN, but some SVGs reuse that class on elements inside the
+   STITCHING layer — creating white-filled boxes. Override to none. */
+[id*="STITCHING"] .outline {
+  fill: none !important;
+}
+
+.flat-thumbnail-fallback {
+  width: 60%;
+  height: 60%;
+  opacity: 0.18;
+}
+
+/* ─── Color swatches ─────────────────────────────────────────────── */
+
+.color-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;            /* Square — CAD precision */
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  flex-shrink: 0;
+}
+
+.color-swatch-lg {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;            /* Square — CAD precision */
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+/* ─── Flat detail (panel view) ───────────────────────────────────── */
+
+.flat-detail {
+  position: relative;
+}
+
+.flat-detail [id*="ANNOTATION"] {
+  opacity: 0.4;
+}
+
+/* ─── Detail panel ───────────────────────────────────────────────── */
+
+.panel-section {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--depot-border);
+}
+
+.panel-section:last-child {
+  border-bottom: none;
+}
+
+.panel-section-title {
+  font-family: var(--depot-font);
+  font-size: 0.5625rem;       /* 9px */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--depot-muted);
+  margin-bottom: 12px;
+}
+
+.panel-empty {
+  font-family: var(--depot-font);
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: var(--depot-faint);
+  font-style: normal;          /* Removed italic — Depot is factual */
+  letter-spacing: 0.02em;
+}
+
+/* ─── Collection card (index page) ───────────────────────────────── */
+
+.collection-manifest-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--depot-border);
+  cursor: pointer;
+  transition: background-color 0.1s;
+  font-family: var(--depot-font);
+}
+
+.collection-manifest-row:hover {
+  background-color: var(--depot-surface-alt);
+}
+
+/* ─── Pillar block ───────────────────────────────────────────────── */
+
+.pillar-block {
+  border: 1px solid var(--depot-border);
+  padding: 20px;
+  position: relative;
+  background: var(--depot-surface);
+}
+
+/* Crosshair on pillar blocks */
+.pillar-block::before {
+  content: "+";
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  font-family: monospace;
+  pointer-events: none;
+}
+
+.pillar-block::after {
+  content: "+";
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  font-family: monospace;
+  pointer-events: none;
+}
+
+/* ─── Header banner ──────────────────────────────────────────────── */
+
+.depot-header {
+  border-bottom: 2px solid var(--depot-ink);
+  background: var(--depot-surface);
+  padding: 32px 48px;
+  position: relative;
+}
+
+.depot-header::before {
+  content: "+";
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  font-family: monospace;
+  pointer-events: none;
+}
+
+.depot-header::after {
+  content: "+";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--depot-crosshair);
+  font-family: monospace;
+  pointer-events: none;
+}
+
+/* ─── Annotation row (dimension-line style) ──────────────────────── */
+
+.annotation-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  padding-left: 16px;
+}
+
+.annotation-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 8px;
+  height: 0;
+  border-top: 1px solid var(--depot-hairline);
+}
+
+/* Terminal dot on annotation leader */
+.annotation-row::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--depot-hairline);
+}
+
+/* ─── Print ──────────────────────────────────────────────────────── */
+
+@media print {
+  .product-sidebar,
+  .product-tabs {
+    display: none;
+  }
+}

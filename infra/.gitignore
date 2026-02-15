@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Do NOT ignore .terraform.lock.hcl if you want reproducible builds.
+# Uncomment the line above only if you've decided not to commit it.
+# !.terraform.lock.hcl

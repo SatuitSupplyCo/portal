@@ -1,0 +1,23 @@
+/* ─── Print styles for tech packs ───────────────────────────────────── */
+
+@media print {
+  /* Page breaks between tech pack pages */
+  .page {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  html,
+  body {
+    background: white !important;
+  }
+
+  /* Hide screen-only elements, show print-only elements */
+  [data-techpack-screen] {
+    display: none !important;
+  }
+
+  [data-techpack-print] {
+    display: block !important;
+  }
+}
