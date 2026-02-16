@@ -98,6 +98,7 @@ resource "aws_ecs_task_definition" "portal" {
         { name = "HOSTNAME", value = "0.0.0.0" },
         { name = "NEXT_PUBLIC_APP_URL", value = "https://portal.${var.domain_name}" },
         { name = "NEXTAUTH_URL", value = "https://portal.${var.domain_name}" },
+        { name = "AUTH_TRUST_HOST", value = "true" },
         { name = "AUTH_ALLOWED_DOMAIN", value = "satuitsupply.com" },
         { name = "REDIS_URL", value = "redis://${local.infra.redis_endpoint}:${local.infra.redis_port}" },
       ]
