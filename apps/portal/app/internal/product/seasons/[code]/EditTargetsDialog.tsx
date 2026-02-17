@@ -150,7 +150,7 @@ export function EditTargetsDialog({
   )
 
   const visibleDimKeys = useMemo(
-    () => new Set(visibleTabs.map((t) => t.id)),
+    () => new Set<string>(visibleTabs.map((t) => t.id)),
     [visibleTabs],
   )
 
