@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771214215324,
-      "tag": "0000_outgoing_thena",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1771217817745,
-      "tag": "0001_rapid_excalibur",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771218176381,
-      "tag": "0002_red_shriek",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1771218435253,
-      "tag": "0003_happy_metal_master",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1771220693424,
-      "tag": "0004_naive_wrecking_crew",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1771244692000,
-      "tag": "0005_bouncy_kingpin",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1771301554527,
-      "tag": "0006_initial",
+      "when": 1771336497048,
+      "tag": "0000_baseline",
       "breakpoints": true
     }
   ]

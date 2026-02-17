@@ -2,11 +2,9 @@ CREATE TYPE "public"."acl_permission" AS ENUM('read', 'write', 'admin');--> stat
 CREATE TYPE "public"."asset_version_status" AS ENUM('draft', 'approved', 'deprecated');--> statement-breakpoint
 CREATE TYPE "public"."block_type" AS ENUM('text', 'heading', 'rule', 'table', 'image', 'asset_ref', 'test_ref', 'techpack_ref', 'pack_ref', 'canon_ref', 'callout');--> statement-breakpoint
 CREATE TYPE "public"."canon_status" AS ENUM('active', 'deprecated');--> statement-breakpoint
-CREATE TYPE "public"."collection_tag" AS ENUM('core', 'material', 'function', 'origin', 'womens', 'accessory', 'lifestyle');--> statement-breakpoint
 CREATE TYPE "public"."core_program_status" AS ENUM('active', 'paused', 'retired');--> statement-breakpoint
 CREATE TYPE "public"."document_status" AS ENUM('draft', 'published', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."execution_status" AS ENUM('draft', 'approved_sampling', 'approved_bulk', 'deprecated');--> statement-breakpoint
-CREATE TYPE "public"."factory_category" AS ENUM('tees', 'fleece', 'swim', 'woven', 'towels', 'headwear', 'accessories');--> statement-breakpoint
 CREATE TYPE "public"."factory_status" AS ENUM('prospect', 'screening', 'sampling', 'approved', 'active', 'dormant', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."factory_type" AS ENUM('knit', 'woven', 'swim', 'accessories', 'multi');--> statement-breakpoint
 CREATE TYPE "public"."invitation_status" AS ENUM('pending', 'accepted', 'expired', 'revoked');--> statement-breakpoint
@@ -24,15 +22,17 @@ CREATE TYPE "public"."relationship_stage" AS ENUM('intro', 'vetting', 'strategic
 CREATE TYPE "public"."replacement_additive" AS ENUM('replacement', 'additive');--> statement-breakpoint
 CREATE TYPE "public"."sample_decision" AS ENUM('approved', 'revise', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."sample_type" AS ENUM('proto', 'fit', 'sms', 'top');--> statement-breakpoint
+CREATE TYPE "public"."season_color_status" AS ENUM('confirmed', 'proposed');--> statement-breakpoint
 CREATE TYPE "public"."season_slot_status" AS ENUM('open', 'filled', 'removed');--> statement-breakpoint
 CREATE TYPE "public"."season_status" AS ENUM('planning', 'locked', 'active', 'closed');--> statement-breakpoint
 CREATE TYPE "public"."season_type" AS ENUM('major', 'minor');--> statement-breakpoint
 CREATE TYPE "public"."sku_concept_status" AS ENUM('draft', 'spec', 'sampling', 'costing', 'approved', 'production', 'live', 'retired');--> statement-breakpoint
 CREATE TYPE "public"."sku_factory_status" AS ENUM('proposed', 'sampling', 'approved', 'production', 'discontinued');--> statement-breakpoint
-CREATE TYPE "public"."studio_category" AS ENUM('product', 'materials', 'brand', 'reference', 'operational');--> statement-breakpoint
+CREATE TYPE "public"."studio_category" AS ENUM('product', 'materials', 'color', 'brand', 'reference', 'operational');--> statement-breakpoint
 CREATE TYPE "public"."studio_inspiration_source" AS ENUM('internal', 'competitor', 'archive', 'vintage', 'editorial', 'trade_show', 'mill_library', 'street', 'other');--> statement-breakpoint
 CREATE TYPE "public"."studio_link_type" AS ENUM('sku_concept', 'factory', 'material', 'sampling_request', 'collection');--> statement-breakpoint
 CREATE TYPE "public"."studio_status" AS ENUM('raw', 'exploring', 'prototyping', 'ready_for_review', 'revisions_requested', 'promoted', 'archived');--> statement-breakpoint
+CREATE TYPE "public"."taxonomy_status" AS ENUM('active', 'deprecated');--> statement-breakpoint
 CREATE TYPE "public"."test_result" AS ENUM('pass', 'fail', 'mixed');--> statement-breakpoint
 CREATE TABLE "accounts" (
 	"user_id" text NOT NULL,
@@ -81,6 +81,7 @@ CREATE TABLE "invitations" (
 	"email" text NOT NULL,
 	"org_id" uuid,
 	"role" "portal_role" NOT NULL,
+	"product_role" "product_role",
 	"org_role" "org_role",
 	"status" "invitation_status" DEFAULT 'pending' NOT NULL,
 	"invited_by" text NOT NULL,
@@ -285,7 +286,7 @@ CREATE TABLE "factory_attachments" (
 CREATE TABLE "factory_capabilities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"factory_id" uuid NOT NULL,
-	"category" "factory_category" NOT NULL,
+	"subcategory_id" uuid NOT NULL,
 	"specialty" text,
 	"in_house_patterning" boolean DEFAULT false NOT NULL,
 	"in_house_dyeing" boolean DEFAULT false NOT NULL,
@@ -298,7 +299,7 @@ CREATE TABLE "factory_capabilities" (
 CREATE TABLE "factory_costing" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"factory_id" uuid NOT NULL,
-	"category" "factory_category" NOT NULL,
+	"subcategory_id" uuid NOT NULL,
 	"target_fob_range_low" numeric(10, 2),
 	"target_fob_range_high" numeric(10, 2),
 	"fabric_markup_percent" numeric(5, 2),
@@ -318,7 +319,7 @@ CREATE TABLE "factory_negotiations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"factory_id" uuid NOT NULL,
 	"season" text,
-	"category" "factory_category",
+	"subcategory_id" uuid,
 	"subject" text NOT NULL,
 	"our_ask" text,
 	"their_response" text,
@@ -434,7 +435,7 @@ CREATE TABLE "studio_entries" (
 	"tags" jsonb DEFAULT '[]'::jsonb,
 	"collection" text,
 	"season" text,
-	"collection_tag" "collection_tag",
+	"collection_id" uuid,
 	"inspiration_source" "studio_inspiration_source",
 	"source_url" text,
 	"estimated_complexity" integer,
@@ -491,6 +492,169 @@ CREATE TABLE "studio_entry_links" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "assortment_tenures" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "assortment_tenures_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "audience_age_groups" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "audience_age_groups_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "audience_genders" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "audience_genders_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "collections" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "collections_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "constructions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "constructions_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "fit_blocks" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"pattern_block_ref" text,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "fit_blocks_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "goods_classes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "goods_classes_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "material_weight_classes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "material_weight_classes_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "product_categories" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"taxonomy_version" text DEFAULT 'v1.0',
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "product_categories_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "product_subcategories" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"category_id" uuid NOT NULL,
+	"goods_class_default_id" uuid,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"taxonomy_version" text DEFAULT 'v1.0',
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "product_subcategories_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "product_types" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"subcategory_id" uuid NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"taxonomy_version" text DEFAULT 'v1.0',
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "product_types_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "selling_windows" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "selling_windows_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "size_scales" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sizes" jsonb NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "size_scales_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "use_cases" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"label" text NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"status" "taxonomy_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "use_cases_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
 CREATE TABLE "core_programs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -502,6 +666,17 @@ CREATE TABLE "core_programs" (
 	"created_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "season_colors" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"season_id" uuid NOT NULL,
+	"studio_entry_id" uuid NOT NULL,
+	"status" "season_color_status" DEFAULT 'proposed' NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "season_colors_season_entry_unq" UNIQUE("season_id","studio_entry_id")
 );
 --> statement-breakpoint
 CREATE TABLE "season_core_refs" (
@@ -516,8 +691,13 @@ CREATE TABLE "season_core_refs" (
 CREATE TABLE "season_slots" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"season_id" uuid NOT NULL,
-	"collection" "collection_tag" NOT NULL,
-	"category" text NOT NULL,
+	"product_type_id" uuid NOT NULL,
+	"collection_id" uuid,
+	"audience_gender_id" uuid NOT NULL,
+	"audience_age_group_id" uuid NOT NULL,
+	"selling_window_id" uuid,
+	"assortment_tenure_id" uuid,
+	"colorway_ids" jsonb DEFAULT '[]'::jsonb,
 	"replacement_flag" boolean DEFAULT false NOT NULL,
 	"status" "season_slot_status" DEFAULT 'open' NOT NULL,
 	"notes" text,
@@ -530,14 +710,27 @@ CREATE TABLE "seasons" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" text NOT NULL,
 	"name" text NOT NULL,
+	"description" text,
+	"launch_date" timestamp with time zone,
 	"season_type" "season_type" NOT NULL,
 	"status" "season_status" DEFAULT 'planning' NOT NULL,
 	"target_sku_count" integer NOT NULL,
+	"target_style_count" integer,
 	"margin_target" numeric(5, 2),
+	"target_evergreen_pct" integer,
 	"complexity_budget" integer,
 	"minor_max_skus" integer,
 	"color_palette" jsonb DEFAULT '[]'::jsonb,
 	"mix_targets" jsonb DEFAULT '{}'::jsonb,
+	"gender_targets" jsonb DEFAULT '{}'::jsonb,
+	"category_targets" jsonb DEFAULT '{}'::jsonb,
+	"product_type_targets" jsonb DEFAULT '{}'::jsonb,
+	"selling_window_targets" jsonb DEFAULT '{}'::jsonb,
+	"tenure_targets" jsonb DEFAULT '{}'::jsonb,
+	"age_group_targets" jsonb DEFAULT '{}'::jsonb,
+	"weight_class_targets" jsonb DEFAULT '{}'::jsonb,
+	"use_case_targets" jsonb DEFAULT '{}'::jsonb,
+	"construction_targets" jsonb DEFAULT '{}'::jsonb,
 	"created_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -559,6 +752,12 @@ CREATE TABLE "sku_concepts" (
 	"season_slot_id" uuid NOT NULL,
 	"source_studio_entry_id" uuid NOT NULL,
 	"metadata_snapshot" jsonb NOT NULL,
+	"construction_id" uuid,
+	"material_weight_class_id" uuid,
+	"fit_block_id" uuid,
+	"use_case_id" uuid,
+	"goods_class_id" uuid,
+	"size_scale_id" uuid,
 	"status" "sku_concept_status" DEFAULT 'draft' NOT NULL,
 	"created_by" text,
 	"approved_by" text,
@@ -638,8 +837,11 @@ ALTER TABLE "factories" ADD CONSTRAINT "factories_created_by_users_id_fk" FOREIG
 ALTER TABLE "factory_attachments" ADD CONSTRAINT "factory_attachments_factory_id_factories_id_fk" FOREIGN KEY ("factory_id") REFERENCES "public"."factories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_attachments" ADD CONSTRAINT "factory_attachments_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_capabilities" ADD CONSTRAINT "factory_capabilities_factory_id_factories_id_fk" FOREIGN KEY ("factory_id") REFERENCES "public"."factories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "factory_capabilities" ADD CONSTRAINT "factory_capabilities_subcategory_id_product_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."product_subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_costing" ADD CONSTRAINT "factory_costing_factory_id_factories_id_fk" FOREIGN KEY ("factory_id") REFERENCES "public"."factories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "factory_costing" ADD CONSTRAINT "factory_costing_subcategory_id_product_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."product_subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_negotiations" ADD CONSTRAINT "factory_negotiations_factory_id_factories_id_fk" FOREIGN KEY ("factory_id") REFERENCES "public"."factories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "factory_negotiations" ADD CONSTRAINT "factory_negotiations_subcategory_id_product_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."product_subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_negotiations" ADD CONSTRAINT "factory_negotiations_negotiated_by_users_id_fk" FOREIGN KEY ("negotiated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_production_runs" ADD CONSTRAINT "factory_production_runs_factory_id_factories_id_fk" FOREIGN KEY ("factory_id") REFERENCES "public"."factories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factory_production_runs" ADD CONSTRAINT "factory_production_runs_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -650,6 +852,7 @@ ALTER TABLE "factory_samples" ADD CONSTRAINT "factory_samples_created_by_users_i
 ALTER TABLE "sku_factory_assignments" ADD CONSTRAINT "sku_factory_assignments_primary_factory_id_factories_id_fk" FOREIGN KEY ("primary_factory_id") REFERENCES "public"."factories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_factory_assignments" ADD CONSTRAINT "sku_factory_assignments_backup_factory_id_factories_id_fk" FOREIGN KEY ("backup_factory_id") REFERENCES "public"."factories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_factory_assignments" ADD CONSTRAINT "sku_factory_assignments_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "studio_entries" ADD CONSTRAINT "studio_entries_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_entries" ADD CONSTRAINT "studio_entries_promoted_by_users_id_fk" FOREIGN KEY ("promoted_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_entries" ADD CONSTRAINT "studio_entries_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_entry_attachments" ADD CONSTRAINT "studio_entry_attachments_entry_id_studio_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."studio_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -658,16 +861,34 @@ ALTER TABLE "studio_entry_images" ADD CONSTRAINT "studio_entry_images_entry_id_s
 ALTER TABLE "studio_entry_images" ADD CONSTRAINT "studio_entry_images_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_entry_links" ADD CONSTRAINT "studio_entry_links_entry_id_studio_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."studio_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_entry_links" ADD CONSTRAINT "studio_entry_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_subcategories" ADD CONSTRAINT "product_subcategories_category_id_product_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."product_categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_subcategories" ADD CONSTRAINT "product_subcategories_goods_class_default_id_goods_classes_id_fk" FOREIGN KEY ("goods_class_default_id") REFERENCES "public"."goods_classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_types" ADD CONSTRAINT "product_types_subcategory_id_product_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."product_subcategories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_programs" ADD CONSTRAINT "core_programs_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_colors" ADD CONSTRAINT "season_colors_season_id_seasons_id_fk" FOREIGN KEY ("season_id") REFERENCES "public"."seasons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_colors" ADD CONSTRAINT "season_colors_studio_entry_id_studio_entries_id_fk" FOREIGN KEY ("studio_entry_id") REFERENCES "public"."studio_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_colors" ADD CONSTRAINT "season_colors_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "season_core_refs" ADD CONSTRAINT "season_core_refs_season_id_seasons_id_fk" FOREIGN KEY ("season_id") REFERENCES "public"."seasons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "season_core_refs" ADD CONSTRAINT "season_core_refs_core_program_id_core_programs_id_fk" FOREIGN KEY ("core_program_id") REFERENCES "public"."core_programs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_season_id_seasons_id_fk" FOREIGN KEY ("season_id") REFERENCES "public"."seasons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_product_type_id_product_types_id_fk" FOREIGN KEY ("product_type_id") REFERENCES "public"."product_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_audience_gender_id_audience_genders_id_fk" FOREIGN KEY ("audience_gender_id") REFERENCES "public"."audience_genders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_audience_age_group_id_audience_age_groups_id_fk" FOREIGN KEY ("audience_age_group_id") REFERENCES "public"."audience_age_groups"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_selling_window_id_selling_windows_id_fk" FOREIGN KEY ("selling_window_id") REFERENCES "public"."selling_windows"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_assortment_tenure_id_assortment_tenures_id_fk" FOREIGN KEY ("assortment_tenure_id") REFERENCES "public"."assortment_tenures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "season_slots" ADD CONSTRAINT "season_slots_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "seasons" ADD CONSTRAINT "seasons_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concept_transitions" ADD CONSTRAINT "sku_concept_transitions_sku_concept_id_sku_concepts_id_fk" FOREIGN KEY ("sku_concept_id") REFERENCES "public"."sku_concepts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concept_transitions" ADD CONSTRAINT "sku_concept_transitions_actor_user_id_users_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_season_slot_id_season_slots_id_fk" FOREIGN KEY ("season_slot_id") REFERENCES "public"."season_slots"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_source_studio_entry_id_studio_entries_id_fk" FOREIGN KEY ("source_studio_entry_id") REFERENCES "public"."studio_entries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_construction_id_constructions_id_fk" FOREIGN KEY ("construction_id") REFERENCES "public"."constructions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_material_weight_class_id_material_weight_classes_id_fk" FOREIGN KEY ("material_weight_class_id") REFERENCES "public"."material_weight_classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_fit_block_id_fit_blocks_id_fk" FOREIGN KEY ("fit_block_id") REFERENCES "public"."fit_blocks"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_use_case_id_use_cases_id_fk" FOREIGN KEY ("use_case_id") REFERENCES "public"."use_cases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_goods_class_id_goods_classes_id_fk" FOREIGN KEY ("goods_class_id") REFERENCES "public"."goods_classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_size_scale_id_size_scales_id_fk" FOREIGN KEY ("size_scale_id") REFERENCES "public"."size_scales"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sku_concepts" ADD CONSTRAINT "sku_concepts_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "assets_acl" ADD CONSTRAINT "assets_acl_asset_id_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."assets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -713,9 +934,9 @@ CREATE INDEX "factories_score_idx" ON "factories" USING btree ("strategic_score"
 CREATE INDEX "factory_attachments_factory_idx" ON "factory_attachments" USING btree ("factory_id");--> statement-breakpoint
 CREATE INDEX "factory_attachments_type_idx" ON "factory_attachments" USING btree ("file_type");--> statement-breakpoint
 CREATE INDEX "factory_capabilities_factory_idx" ON "factory_capabilities" USING btree ("factory_id");--> statement-breakpoint
-CREATE INDEX "factory_capabilities_category_idx" ON "factory_capabilities" USING btree ("category");--> statement-breakpoint
+CREATE INDEX "factory_capabilities_subcategory_idx" ON "factory_capabilities" USING btree ("subcategory_id");--> statement-breakpoint
 CREATE INDEX "factory_costing_factory_idx" ON "factory_costing" USING btree ("factory_id");--> statement-breakpoint
-CREATE INDEX "factory_costing_category_idx" ON "factory_costing" USING btree ("category");--> statement-breakpoint
+CREATE INDEX "factory_costing_subcategory_idx" ON "factory_costing" USING btree ("subcategory_id");--> statement-breakpoint
 CREATE INDEX "factory_negotiations_factory_idx" ON "factory_negotiations" USING btree ("factory_id");--> statement-breakpoint
 CREATE INDEX "factory_negotiations_season_idx" ON "factory_negotiations" USING btree ("season");--> statement-breakpoint
 CREATE INDEX "factory_prod_runs_factory_idx" ON "factory_production_runs" USING btree ("factory_id");--> statement-breakpoint
@@ -742,12 +963,36 @@ CREATE INDEX "studio_entry_images_entry_idx" ON "studio_entry_images" USING btre
 CREATE INDEX "studio_entry_links_entry_idx" ON "studio_entry_links" USING btree ("entry_id");--> statement-breakpoint
 CREATE INDEX "studio_entry_links_type_idx" ON "studio_entry_links" USING btree ("link_type");--> statement-breakpoint
 CREATE INDEX "studio_entry_links_target_idx" ON "studio_entry_links" USING btree ("target_id");--> statement-breakpoint
+CREATE INDEX "assortment_tenures_code_idx" ON "assortment_tenures" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "audience_age_groups_code_idx" ON "audience_age_groups" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "audience_genders_code_idx" ON "audience_genders" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "collections_code_idx" ON "collections" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "collections_status_idx" ON "collections" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "constructions_code_idx" ON "constructions" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "fit_blocks_code_idx" ON "fit_blocks" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "goods_classes_code_idx" ON "goods_classes" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "material_weight_classes_code_idx" ON "material_weight_classes" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "product_categories_code_idx" ON "product_categories" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "product_categories_status_idx" ON "product_categories" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "product_subcategories_category_idx" ON "product_subcategories" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX "product_subcategories_code_idx" ON "product_subcategories" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "product_subcategories_status_idx" ON "product_subcategories" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "product_types_subcategory_idx" ON "product_types" USING btree ("subcategory_id");--> statement-breakpoint
+CREATE INDEX "product_types_code_idx" ON "product_types" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "product_types_status_idx" ON "product_types" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "selling_windows_code_idx" ON "selling_windows" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "size_scales_code_idx" ON "size_scales" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "use_cases_code_idx" ON "use_cases" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "core_programs_status_idx" ON "core_programs" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "season_colors_season_idx" ON "season_colors" USING btree ("season_id");--> statement-breakpoint
+CREATE INDEX "season_colors_entry_idx" ON "season_colors" USING btree ("studio_entry_id");--> statement-breakpoint
 CREATE INDEX "season_core_refs_season_idx" ON "season_core_refs" USING btree ("season_id");--> statement-breakpoint
 CREATE INDEX "season_core_refs_program_idx" ON "season_core_refs" USING btree ("core_program_id");--> statement-breakpoint
 CREATE INDEX "season_slots_season_idx" ON "season_slots" USING btree ("season_id");--> statement-breakpoint
 CREATE INDEX "season_slots_status_idx" ON "season_slots" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "season_slots_collection_idx" ON "season_slots" USING btree ("collection");--> statement-breakpoint
+CREATE INDEX "season_slots_product_type_idx" ON "season_slots" USING btree ("product_type_id");--> statement-breakpoint
+CREATE INDEX "season_slots_collection_idx" ON "season_slots" USING btree ("collection_id");--> statement-breakpoint
+CREATE INDEX "season_slots_gender_idx" ON "season_slots" USING btree ("audience_gender_id");--> statement-breakpoint
 CREATE INDEX "seasons_status_idx" ON "seasons" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "seasons_type_idx" ON "seasons" USING btree ("season_type");--> statement-breakpoint
 CREATE INDEX "sku_concept_transitions_concept_idx" ON "sku_concept_transitions" USING btree ("sku_concept_id");--> statement-breakpoint

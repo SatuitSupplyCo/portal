@@ -172,6 +172,18 @@ jobs:
 
           echo "Migration completed successfully."
 
+      - name: Dump migration logs on failure
+        if: failure()
+        run: |
+          TASK_ID=$(echo "${{ steps.run-migration.outputs.task_arn }}" | awk -F/ '{print $NF}')
+          echo "=== Migration logs (portal/portal/${TASK_ID}) ==="
+          aws logs get-log-events \
+            --log-group-name /ecs/satuit-prod \
+            --log-stream-name "portal/portal/${TASK_ID}" \
+            --limit 50 \
+            --output text \
+            --query 'events[*].message' || echo "Could not fetch logs."
+
   deploy:
     name: Deploy to ECS
     runs-on: ubuntu-latest

@@ -1,1 +1,0 @@
-ALTER TYPE "public"."studio_category" ADD VALUE 'color' BEFORE 'brand';
