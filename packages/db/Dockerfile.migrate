@@ -12,4 +12,4 @@ COPY packages/db ./packages/db
 COPY packages/config-typescript ./packages/config-typescript
 
 WORKDIR /app/packages/db
-CMD ["pnpm", "db:push"]
+CMD ["pnpm", "db:push", "--force"]
