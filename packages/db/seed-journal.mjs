@@ -12,20 +12,19 @@ const migrations = [
 ];
 
 try {
-  // Check if the DB actually has the tables from migration 0000.
-  // If it does, the schema was applied (via push or migrations) and we
-  // should seed the journal so drizzle only runs new migrations.
-  // If not, the DB is fresh/broken — clean up orphaned objects and let
-  // ALL migrations run from scratch.
-  const [{ exists: hasUsersTable }] = await sql`
+  // Use season_slots as the definitive check — it's the last major table
+  // created in migration 0000, so if it exists the full schema is there.
+  const [{ exists: schemaComplete }] = await sql`
     SELECT EXISTS (
       SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'users'
+      WHERE table_schema = 'public' AND table_name = 'season_slots'
     )
   `;
 
-  if (hasUsersTable) {
-    console.log("DB has existing tables — seeding journal for migrations 0000-0005.");
+  if (schemaComplete) {
+    // Full schema exists (from push or prior migrations) — seed the journal
+    // so drizzle only runs new migrations (0006+).
+    console.log("Schema is complete — seeding journal for migrations 0000-0005.");
     await sql`CREATE SCHEMA IF NOT EXISTS "drizzle"`;
     await sql`
       CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
@@ -46,22 +45,31 @@ try {
     }
     console.log("Journal seed complete.");
   } else {
-    console.log("DB has no tables — preparing clean slate for full migration run.");
+    // Schema is incomplete or missing — nuke partial state and start fresh.
+    // Safe because this is initial setup with no production data.
+    console.log("Schema incomplete — dropping partial state for clean migration run.");
 
-    // Drop the drizzle schema (removes any bad journal entries from prior seeds)
-    await sql`DROP SCHEMA IF EXISTS "drizzle" CASCADE`;
-    console.log("Dropped drizzle schema.");
+    // Drop all tables in public schema (handles partial table state)
+    const tables = await sql`
+      SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    `;
+    for (const { tablename } of tables) {
+      await sql.unsafe(`DROP TABLE IF EXISTS "public"."${tablename}" CASCADE`);
+      console.log(`Dropped table: ${tablename}`);
+    }
 
-    // Drop orphaned enum types left by failed pushes
+    // Drop all enum types in public schema (handles orphaned types)
     const types = await sql`
       SELECT typname FROM pg_type
       WHERE typnamespace = 'public'::regnamespace AND typtype = 'e'
     `;
-
     for (const { typname } of types) {
       await sql.unsafe(`DROP TYPE IF EXISTS "public"."${typname}" CASCADE`);
-      console.log(`Dropped orphaned type: ${typname}`);
+      console.log(`Dropped type: ${typname}`);
     }
+
+    // Drop the drizzle journal (removes bad seed entries)
+    await sql`DROP SCHEMA IF EXISTS "drizzle" CASCADE`;
 
     console.log("Clean slate ready — all migrations will run from scratch.");
   }
