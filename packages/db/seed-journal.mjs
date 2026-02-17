@@ -12,28 +12,61 @@ const migrations = [
 ];
 
 try {
-  await sql`CREATE SCHEMA IF NOT EXISTS "drizzle"`;
-  await sql`
-    CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
-      id SERIAL PRIMARY KEY,
-      hash text NOT NULL,
-      created_at bigint
+  // Check if the DB actually has the tables from migration 0000.
+  // If it does, the schema was applied (via push or migrations) and we
+  // should seed the journal so drizzle only runs new migrations.
+  // If not, the DB is fresh/broken — clean up orphaned objects and let
+  // ALL migrations run from scratch.
+  const [{ exists: hasUsersTable }] = await sql`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'users'
     )
   `;
 
-  const existing = await sql`SELECT hash FROM "drizzle"."__drizzle_migrations"`;
-  const existingHashes = new Set(existing.map((r) => r.hash));
+  if (hasUsersTable) {
+    console.log("DB has existing tables — seeding journal for migrations 0000-0005.");
+    await sql`CREATE SCHEMA IF NOT EXISTS "drizzle"`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+        id SERIAL PRIMARY KEY,
+        hash text NOT NULL,
+        created_at bigint
+      )
+    `;
 
-  for (const m of migrations) {
-    if (!existingHashes.has(m.hash)) {
-      await sql`INSERT INTO "drizzle"."__drizzle_migrations" (hash, created_at) VALUES (${m.hash}, ${m.created_at})`;
-      console.log(`Seeded migration: ${m.hash.slice(0, 16)}...`);
+    const existing = await sql`SELECT hash FROM "drizzle"."__drizzle_migrations"`;
+    const existingHashes = new Set(existing.map((r) => r.hash));
+
+    for (const m of migrations) {
+      if (!existingHashes.has(m.hash)) {
+        await sql`INSERT INTO "drizzle"."__drizzle_migrations" (hash, created_at) VALUES (${m.hash}, ${m.created_at})`;
+        console.log(`Seeded migration: ${m.hash.slice(0, 16)}...`);
+      }
     }
-  }
+    console.log("Journal seed complete.");
+  } else {
+    console.log("DB has no tables — preparing clean slate for full migration run.");
 
-  console.log("Journal seed complete.");
+    // Drop the drizzle schema (removes any bad journal entries from prior seeds)
+    await sql`DROP SCHEMA IF EXISTS "drizzle" CASCADE`;
+    console.log("Dropped drizzle schema.");
+
+    // Drop orphaned enum types left by failed pushes
+    const types = await sql`
+      SELECT typname FROM pg_type
+      WHERE typnamespace = 'public'::regnamespace AND typtype = 'e'
+    `;
+
+    for (const { typname } of types) {
+      await sql.unsafe(`DROP TYPE IF EXISTS "public"."${typname}" CASCADE`);
+      console.log(`Dropped orphaned type: ${typname}`);
+    }
+
+    console.log("Clean slate ready — all migrations will run from scratch.");
+  }
 } catch (err) {
-  console.error("Failed to seed journal:", err);
+  console.error("Pre-migration failed:", err);
   process.exit(1);
 } finally {
   await sql.end();
