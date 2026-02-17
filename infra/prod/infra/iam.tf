@@ -109,6 +109,8 @@ resource "aws_iam_role_policy" "gha_app_deploy" {
           "ecs:RegisterTaskDefinition",
           "ecs:DescribeTaskDefinition",
           "ecs:DeregisterTaskDefinition",
+          "ecs:RunTask",
+          "ecs:DescribeTasks",
         ]
         Resource = "*"
       },

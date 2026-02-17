@@ -21,13 +21,15 @@ env:
   ECS_CLUSTER: satuit-prod
   ECS_SERVICE: portal
   CONTAINER_NAME: portal
+  TASK_FAMILY: satuit-prod-portal
 
 jobs:
   build-and-push:
-    name: Build & Push Image
+    name: Build & Push Images
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
+      migrate_tag: ${{ steps.meta.outputs.migrate_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,11 +44,13 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set image tag
+      - name: Set image tags
         id: meta
-        run: echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          echo "migrate_tag=migrate-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push Docker image
+      - name: Build and push portal image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -57,10 +61,122 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_URL=https://portal.satuitsupply.com
 
+      - name: Build and push migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/db/Dockerfile.migrate
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.migrate_tag }}
+
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: prod
+    steps:
+      - name: Configure AWS credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::095194426970:role/gha-app-deploy-prod
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get network config from running service
+        id: network
+        run: |
+          # Get the network configuration from the existing service
+          SUBNETS=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets' \
+            --output text | tr '\t' ',')
+
+          SECURITY_GROUPS=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups' \
+            --output text | tr '\t' ',')
+
+          echo "subnets=$SUBNETS" >> "$GITHUB_OUTPUT"
+          echo "security_groups=$SECURITY_GROUPS" >> "$GITHUB_OUTPUT"
+          echo "Using subnets: $SUBNETS"
+          echo "Using security groups: $SECURITY_GROUPS"
+
+      - name: Get current task definition for migration
+        id: task-def
+        run: |
+          # Get the current task def and swap the image to the migration image
+          TASK_DEF_ARN=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_DEF_ARN" \
+            --query 'taskDefinition' \
+            --output json > task-def.json
+
+          MIGRATE_IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.migrate_tag }}"
+
+          # Create a migration-specific task def: swap image and remove health check
+          jq --arg IMAGE "$MIGRATE_IMAGE" \
+            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
+             .containerDefinitions[0].image = $IMAGE |
+             del(.containerDefinitions[0].healthCheck) |
+             .containerDefinitions[0].essential = true' \
+            task-def.json > migrate-task-def.json
+
+          ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://migrate-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "arn=$ARN" >> "$GITHUB_OUTPUT"
+          echo "Registered migration task def: $ARN"
+
+      - name: Run migration task
+        id: run-migration
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition ${{ steps.task-def.outputs.arn }} \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ steps.network.outputs.subnets }}],securityGroups=[${{ steps.network.outputs.security_groups }}],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"portal","command":["pnpm","db:push"]}]}' \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "task_arn=$TASK_ARN" >> "$GITHUB_OUTPUT"
+          echo "Started migration task: $TASK_ARN"
+
+      - name: Wait for migration to complete
+        run: |
+          echo "Waiting for migration task to stop..."
+          aws ecs wait tasks-stopped \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks ${{ steps.run-migration.outputs.task_arn }}
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks ${{ steps.run-migration.outputs.task_arn }} \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          echo "Migration exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed! Check CloudWatch logs."
+            exit 1
+          fi
+
+          echo "Migration completed successfully."
+
   deploy:
     name: Deploy to ECS
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-and-push, migrate]
     environment: prod
     steps:
       - name: Configure AWS credentials (prod)
@@ -77,12 +193,12 @@ jobs:
             --services ${{ env.ECS_SERVICE }} \
             --query 'services[0].taskDefinition' \
             --output text > current-task-def-arn.txt
-          
+
           aws ecs describe-task-definition \
             --task-definition $(cat current-task-def-arn.txt) \
             --query 'taskDefinition' \
             --output json > task-def.json
-          
+
           # Clean fields that can't be in a RegisterTaskDefinition call
           jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
             task-def.json > clean-task-def.json
@@ -91,11 +207,11 @@ jobs:
         id: new-task-def
         run: |
           IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.image_tag }}"
-          
+
           jq --arg IMAGE "$IMAGE" \
             '.containerDefinitions[0].image = $IMAGE' \
             clean-task-def.json > new-task-def.json
-          
+
           echo "Updated image to: $IMAGE"
 
       - name: Register new task definition
@@ -105,7 +221,7 @@ jobs:
             --cli-input-json file://new-task-def.json \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
-          
+
           echo "arn=$ARN" >> "$GITHUB_OUTPUT"
           echo "Registered: $ARN"
 
@@ -116,7 +232,7 @@ jobs:
             --service ${{ env.ECS_SERVICE }} \
             --task-definition ${{ steps.register.outputs.arn }} \
             --force-new-deployment
-          
+
           echo "Deployment started. Waiting for service stability..."
 
       - name: Wait for deployment
@@ -124,7 +240,7 @@ jobs:
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }}
-          
+
           echo "Service is stable."
 
       - name: Smoke test

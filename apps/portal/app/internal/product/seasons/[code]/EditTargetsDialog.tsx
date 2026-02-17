@@ -150,7 +150,7 @@ export function EditTargetsDialog({
   )
 
   const visibleDimKeys = useMemo(
-    () => new Set(visibleTabs.filter((t) => t.id !== 'overall').map((t) => t.id)),
+    () => new Set(visibleTabs.map((t) => t.id)),
     [visibleTabs],
   )
 
@@ -213,7 +213,7 @@ export function EditTargetsDialog({
     setUseCaseTargets(currentUseCaseTargets)
     setGenderTargets(currentGenderTargets)
     setAgeGroupTargets(currentAgeGroupTargets)
-    setActiveTab(initialTab ?? 'overall')
+    setActiveTab(initialTab ?? 'category')
     setShowOverageConfirm(false)
     setError(null)
   }
@@ -269,7 +269,7 @@ export function EditTargetsDialog({
         {visibleTabs.length > 1 && (
         <div className="flex gap-0.5 border-b border-[var(--depot-hairline)] -mx-6 px-6 overflow-x-auto">
           {visibleTabs.map((dim) => {
-            const isOver = dim.id !== 'overall' && overages[dim.id]
+            const isOver = overages[dim.id]
             return (
               <button
                 key={dim.id}
