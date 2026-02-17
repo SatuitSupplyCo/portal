@@ -214,7 +214,7 @@ const docsToSeed: DocSeed[] = [
 
 // ─── Seasons & Core Programs ─────────────────────────────────────────
 
-async function seedSeasons() {
+export async function seedSeasons() {
   console.log("Seeding seasons...\n")
 
   const seasonDefs: Array<{
@@ -288,7 +288,7 @@ async function seedSeasons() {
   console.log("")
 }
 
-async function seedCorePrograms() {
+export async function seedCorePrograms() {
   console.log("Seeding core programs...\n")
 
   const existing = await db.query.corePrograms.findFirst({
@@ -312,7 +312,7 @@ async function seedCorePrograms() {
 
 // ─── Product Taxonomy Seed ────────────────────────────────────────────
 
-async function seedProductTaxonomy() {
+export async function seedProductTaxonomy() {
   console.log("Seeding product taxonomy...\n")
 
   // Check if already seeded
@@ -697,7 +697,7 @@ async function seedProductTaxonomy() {
   console.log("")
 }
 
-async function seed() {
+export async function seed() {
   console.log("Seeding brand documents...\n")
 
   for (const def of docsToSeed) {
@@ -752,10 +752,4 @@ async function seed() {
   await seedProductTaxonomy()
 
   console.log("Done!")
-  process.exit(0)
 }
-
-seed().catch((err) => {
-  console.error("Seed failed:", err)
-  process.exit(1)
-})
