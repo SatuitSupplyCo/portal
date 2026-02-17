@@ -22,18 +22,36 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@repo/ui/dropdown-menu'
 import { cn } from '@repo/ui/utils'
-import { ChevronRight, ChevronDown, ChevronsUpDown, GripVertical } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronsUpDown, GripVertical, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { AddItemDialog } from './AddItemDialog'
+import { EditNameDialog } from './EditNameDialog'
+import { DeleteConfirmDialog } from './DeleteConfirmDialog'
 import {
   createCategory,
   createSubcategory,
   createProductType,
+  updateCategory,
+  updateSubcategory,
+  updateProductType,
   reorderCategories,
   reorderSubcategories,
   reorderProductTypes,
   moveSubcategory,
   moveProductType,
+  checkCategoryUsage,
+  checkSubcategoryUsage,
+  checkProductTypeUsage,
+  deleteCategory,
+  deleteSubcategory,
+  deleteProductType,
 } from '../actions'
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -122,6 +140,41 @@ function findItemByParsed(
   return undefined
 }
 
+// ─── Item Actions Menu ──────────────────────────────────────────────
+
+function ItemActionsMenu({
+  onRename,
+  onDelete,
+}: {
+  onRename: () => void
+  onDelete: () => void
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={onRename}>
+          <Pencil className="h-3.5 w-3.5" />
+          Rename
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 // ─── Sortable Row: Category ─────────────────────────────────────────
 
 function SortableCategoryRow({
@@ -130,6 +183,8 @@ function SortableCategoryRow({
   isHighlighted,
   isDragSource,
   onToggle,
+  onRename,
+  onDelete,
   children,
 }: {
   cat: Category
@@ -137,6 +192,8 @@ function SortableCategoryRow({
   isHighlighted: boolean
   isDragSource: boolean
   onToggle: () => void
+  onRename: () => void
+  onDelete: () => void
   children: React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
@@ -152,7 +209,7 @@ function SortableCategoryRow({
     <div ref={setNodeRef} style={style}>
       <div
         className={cn(
-          'flex items-center gap-3 px-4 py-3 transition-colors',
+          'group/row flex items-center gap-3 px-4 py-3 transition-colors',
           isDragSource && 'opacity-30',
           isHighlighted && !isDragSource && 'bg-accent/50 ring-1 ring-inset ring-primary/20',
           !isDragSource && !isHighlighted && 'hover:bg-accent/50',
@@ -183,6 +240,7 @@ function SortableCategoryRow({
         <span className="ml-auto text-xs text-muted-foreground">
           {cat.subcategories.length} subcategories
         </span>
+        <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
       </div>
       {isExpanded && children}
     </div>
@@ -197,6 +255,8 @@ function SortableSubcategoryRow({
   isHighlighted,
   isDragSource,
   onToggle,
+  onRename,
+  onDelete,
   children,
 }: {
   sub: Subcategory
@@ -204,6 +264,8 @@ function SortableSubcategoryRow({
   isHighlighted: boolean
   isDragSource: boolean
   onToggle: () => void
+  onRename: () => void
+  onDelete: () => void
   children: React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
@@ -219,7 +281,7 @@ function SortableSubcategoryRow({
     <div ref={setNodeRef} style={style}>
       <div
         className={cn(
-          'flex items-center gap-3 px-4 py-2.5 pl-10 transition-colors',
+          'group/row flex items-center gap-3 px-4 py-2.5 pl-10 transition-colors',
           isDragSource && 'opacity-30',
           isHighlighted && !isDragSource && 'bg-accent/50 ring-1 ring-inset ring-primary/20',
           !isDragSource && !isHighlighted && 'hover:bg-accent/30',
@@ -250,6 +312,7 @@ function SortableSubcategoryRow({
         <span className="ml-auto text-xs text-muted-foreground">
           {sub.productTypes.length} types
         </span>
+        <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
       </div>
       {isExpanded && children}
     </div>
@@ -262,10 +325,14 @@ function SortableProductTypeRow({
   pt,
   isHighlighted,
   isDragSource,
+  onRename,
+  onDelete,
 }: {
   pt: ProductType
   isHighlighted: boolean
   isDragSource: boolean
+  onRename: () => void
+  onDelete: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: prefixId('productType', pt.id),
@@ -281,7 +348,7 @@ function SortableProductTypeRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 px-4 py-2 pl-20 transition-colors',
+        'group/row flex items-center gap-3 px-4 py-2 pl-20 transition-colors',
         isDragSource && 'opacity-30',
         isHighlighted && !isDragSource && 'bg-accent/40',
         !isDragSource && !isHighlighted && 'hover:bg-accent/20',
@@ -298,6 +365,8 @@ function SortableProductTypeRow({
       <span className="text-sm text-muted-foreground">{pt.name}</span>
       <code className="text-xs text-muted-foreground/60 font-mono">{pt.code}</code>
       <StatusBadge status={pt.status} />
+      <span className="ml-auto" />
+      <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
     </div>
   )
 }
@@ -355,6 +424,18 @@ export function TaxonomyHierarchy({
   })
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null)
+
+  // Edit/Delete dialog state
+  const [renameTarget, setRenameTarget] = useState<{
+    type: ItemType
+    id: string
+    name: string
+  } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: ItemType
+    id: string
+    name: string
+  } | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -697,6 +778,8 @@ export function TaxonomyHierarchy({
                     activeParsed.id === cat.id
                   }
                   onToggle={() => toggle(cat.id)}
+                  onRename={() => setRenameTarget({ type: 'category', id: cat.id, name: cat.name })}
+                  onDelete={() => setDeleteTarget({ type: 'category', id: cat.id, name: cat.name })}
                 >
                   <div className="bg-muted/30">
                     <SortableContext
@@ -720,6 +803,8 @@ export function TaxonomyHierarchy({
                               activeParsed.id === sub.id
                             }
                             onToggle={() => toggle(sub.id)}
+                            onRename={() => setRenameTarget({ type: 'subcategory', id: sub.id, name: sub.name })}
+                            onDelete={() => setDeleteTarget({ type: 'subcategory', id: sub.id, name: sub.name })}
                           >
                             <div className="bg-muted/20">
                               <SortableContext
@@ -738,6 +823,8 @@ export function TaxonomyHierarchy({
                                       activeParsed?.type === 'productType' &&
                                       activeParsed.id === pt.id
                                     }
+                                    onRename={() => setRenameTarget({ type: 'productType', id: pt.id, name: pt.name })}
+                                    onDelete={() => setDeleteTarget({ type: 'productType', id: pt.id, name: pt.name })}
                                   />
                                 ))}
                               </SortableContext>
@@ -813,6 +900,38 @@ export function TaxonomyHierarchy({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {renameTarget && (
+        <EditNameDialog
+          open={!!renameTarget}
+          onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
+          title={`Rename ${renameTarget.type === 'category' ? 'Category' : renameTarget.type === 'subcategory' ? 'Subcategory' : 'Product Type'}`}
+          currentName={renameTarget.name}
+          onSave={async (newName) => {
+            if (renameTarget.type === 'category') return updateCategory(renameTarget.id, { name: newName })
+            if (renameTarget.type === 'subcategory') return updateSubcategory(renameTarget.id, { name: newName })
+            return updateProductType(renameTarget.id, { name: newName })
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+          itemName={deleteTarget.name}
+          checkUsage={async () => {
+            if (deleteTarget.type === 'category') return checkCategoryUsage(deleteTarget.id)
+            if (deleteTarget.type === 'subcategory') return checkSubcategoryUsage(deleteTarget.id)
+            return checkProductTypeUsage(deleteTarget.id)
+          }}
+          onDelete={async () => {
+            if (deleteTarget.type === 'category') return deleteCategory(deleteTarget.id)
+            if (deleteTarget.type === 'subcategory') return deleteSubcategory(deleteTarget.id)
+            return deleteProductType(deleteTarget.id)
+          }}
+        />
+      )}
     </div>
   )
 }
