@@ -112,7 +112,7 @@ export function EditTargetsDialog({
 
   // When focused, only show the focused dimension (no Overall tab)
   const visibleTabs = useMemo(() => {
-    if (focusedDimension && focusedDimension !== 'overall') {
+    if (focusedDimension) {
       return DIMENSIONS.filter((d) => d.id === focusedDimension)
     }
     return DIMENSIONS
@@ -256,7 +256,7 @@ export function EditTargetsDialog({
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {focusedDimension && focusedDimension !== 'overall'
+            {focusedDimension
               ? `${DIMENSIONS.find((d) => d.id === focusedDimension)?.label ?? ''} Targets`
               : 'Assortment Targets'}
           </DialogTitle>
