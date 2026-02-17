@@ -144,7 +144,7 @@ jobs:
             --task-definition ${{ steps.task-def.outputs.arn }} \
             --launch-type FARGATE \
             --network-configuration "awsvpcConfiguration={subnets=[${{ steps.network.outputs.subnets }}],securityGroups=[${{ steps.network.outputs.security_groups }}],assignPublicIp=DISABLED}" \
-            --overrides '{"containerOverrides":[{"name":"portal","command":["pnpm","db:push","--force"]}]}' \
+            --overrides '{"containerOverrides":[{"name":"portal","command":["sh","-c","yes | pnpm db:push"]}]}' \
             --query 'tasks[0].taskArn' \
             --output text)
 
