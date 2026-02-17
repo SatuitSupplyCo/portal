@@ -1,4 +1,8 @@
 DO $$ BEGIN
+  CREATE TYPE "public"."product_role" AS ENUM('studio_contributor', 'product_lead', 'founder', 'external_designer', 'factory_partner');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
   CREATE TYPE "public"."taxonomy_status" AS ENUM('active', 'deprecated');
 EXCEPTION WHEN duplicate_object THEN null;
 END $$;--> statement-breakpoint
