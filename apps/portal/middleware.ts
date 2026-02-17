@@ -16,7 +16,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
 
   // ── Public routes ────────────────────────────────────────────────
-  if (pathname.startsWith("/api/auth") || pathname === "/api/health") {
+  if (pathname.startsWith("/api/auth") || pathname === "/api/health" || pathname === "/api/bootstrap") {
     return NextResponse.next()
   }
 
