@@ -120,25 +120,27 @@ export function IconRail({ surface }: IconRailProps) {
 
       {/* Bottom: Admin link (internal only) */}
       {surface === "internal" && (
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Link
-              href="/admin"
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors mt-auto hover:bg-accent hover:text-foreground",
-                pathname.startsWith("/admin")
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground",
-              )}
-            >
-              <Shield className="h-4 w-4" />
-              <span className="sr-only">Admin</span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            Admin
-          </TooltipContent>
-        </Tooltip>
+        <div className="flex flex-col items-center gap-1 mt-auto">
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-foreground",
+                  pathname.startsWith("/admin")
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                <span className="sr-only">Admin</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Admin
+            </TooltipContent>
+          </Tooltip>
+        </div>
       )}
     </nav>
   )

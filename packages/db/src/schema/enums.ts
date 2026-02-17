@@ -130,15 +130,7 @@ export const factoryTypeEnum = pgEnum('factory_type', [
   'multi',
 ]);
 
-export const factoryCategoryEnum = pgEnum('factory_category', [
-  'tees',
-  'fleece',
-  'swim',
-  'woven',
-  'towels',
-  'headwear',
-  'accessories',
-]);
+// factoryCategoryEnum removed — replaced by product_subcategories FK
 
 export const sampleTypeEnum = pgEnum('sample_type', [
   'proto',
@@ -190,6 +182,7 @@ export const negotiationOutcomeEnum = pgEnum('negotiation_outcome', [
 export const studioCategoryEnum = pgEnum('studio_category', [
   'product',
   'materials',
+  'color',
   'brand',
   'reference',
   'operational',
@@ -199,7 +192,9 @@ export const studioStatusEnum = pgEnum('studio_status', [
   'raw',
   'exploring',
   'prototyping',
-  'linked',
+  'ready_for_review',
+  'revisions_requested',
+  'promoted',
   'archived',
 ]);
 
@@ -221,4 +216,70 @@ export const studioLinkTypeEnum = pgEnum('studio_link_type', [
   'material',
   'sampling_request',
   'collection',
+]);
+
+// ─── Product Taxonomy ───────────────────────────────────────────────
+
+export const taxonomyStatusEnum = pgEnum('taxonomy_status', [
+  'active',
+  'deprecated',
+]);
+
+// ─── Product Lifecycle ──────────────────────────────────────────────
+
+// genderEnum removed — replaced by audience_genders table
+
+export const seasonColorStatusEnum = pgEnum('season_color_status', [
+  'confirmed',
+  'proposed',
+]);
+
+export const productRoleEnum = pgEnum('product_role', [
+  'studio_contributor',
+  'product_lead',
+  'founder',
+  'external_designer',
+  'factory_partner',
+]);
+
+// collectionTagEnum removed — replaced by collections table
+
+export const replacementAdditiveEnum = pgEnum('replacement_additive', [
+  'replacement',
+  'additive',
+]);
+
+export const seasonTypeEnum = pgEnum('season_type', [
+  'major',
+  'minor',
+]);
+
+export const seasonStatusEnum = pgEnum('season_status', [
+  'planning',
+  'locked',
+  'active',
+  'closed',
+]);
+
+export const seasonSlotStatusEnum = pgEnum('season_slot_status', [
+  'open',
+  'filled',
+  'removed',
+]);
+
+export const skuConceptStatusEnum = pgEnum('sku_concept_status', [
+  'draft',
+  'spec',
+  'sampling',
+  'costing',
+  'approved',
+  'production',
+  'live',
+  'retired',
+]);
+
+export const coreProgramStatusEnum = pgEnum('core_program_status', [
+  'active',
+  'paused',
+  'retired',
 ]);

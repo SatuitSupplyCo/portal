@@ -30,7 +30,7 @@ resource "aws_route53_record" "spf" {
   ttl     = 3600
 
   records = [
-    "v=spf1 include:_spf.google.com ~all",
+    "v=spf1 include:_spf.google.com include:amazonses.com ~all",
   ]
 }
 

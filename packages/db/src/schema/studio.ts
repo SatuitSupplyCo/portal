@@ -17,6 +17,7 @@ import {
   timestamp,
   uuid,
   integer,
+  decimal,
   jsonb,
   index,
 } from 'drizzle-orm/pg-core';
@@ -25,8 +26,10 @@ import {
   studioStatusEnum,
   studioInspirationSourceEnum,
   studioLinkTypeEnum,
+  replacementAdditiveEnum,
 } from './enums';
 import { users } from './auth';
+import { collections } from './product-taxonomy';
 
 // ─── 1. Studio Entries (Primary Entity) ──────────────────────────────
 
@@ -42,33 +45,40 @@ export const studioEntries = pgTable(
     status: studioStatusEnum('status').notNull().default('raw'),
 
     // Categorization
-    tags: jsonb('tags').$type<string[]>().default([]), // Collection, Season, Silhouette, Fabric Type, etc.
+    tags: jsonb('tags').$type<string[]>().default([]),
     collection: text('collection'), // e.g. "FW26", "Core"
     season: text('season'), // e.g. "FW26", "SS27"
+    collectionId: uuid('collection_id').references(() => collections.id), // structured collection targeting
 
     // Source tracking
     inspirationSource: studioInspirationSourceEnum('inspiration_source'),
-    sourceUrl: text('source_url'), // URL embed (articles, lookbooks, etc.)
+    sourceUrl: text('source_url'),
 
-    // Scoring
+    // Scoring & structured product fields
     estimatedComplexity: integer('estimated_complexity'), // 1–5
     strategicRelevanceScore: integer('strategic_relevance_score'), // 1–5
 
-    // ── Category-specific metadata (stored as JSON) ──────────────────
-    // Populated based on category:
-    //
-    // Product: { silhouetteType, constructionFeatures, trimNotes, fitDirection }
-    // Materials: { weight, composition, handFeel, potentialApplications, millReference }
-    // Brand: { photographyMood, textureReferences, colorStudies, editorialDirection }
-    // Reference: { competitorName, pricingObservations, fitCommentary, verdict }
-    // Operational: { factoryTechnique, finishingMethod, packagingExecution }
+    // Product lifecycle fields (required before ready_for_review)
+    intent: text('intent'), // short text: "why does this exist?"
+    problemStatement: text('problem_statement'), // what problem does this solve?
+    priceTierTarget: text('price_tier_target'), // e.g. "55-65", "$$$"
+    marginTarget: decimal('margin_target', { precision: 5, scale: 2 }), // target margin %
+    replacementVsAdditive: replacementAdditiveEnum('replacement_vs_additive'),
+    targetSeasonId: uuid('target_season_id'), // FK to seasons — defined in relations
+
+    // Category-specific metadata (stored as JSON for truly freeform data)
     categoryMetadata: jsonb('category_metadata').$type<Record<string, unknown>>().default({}),
 
     // Archive reason (required when status = archived)
     archiveReason: text('archive_reason'),
 
+    // Review & promotion tracking
+    reviewSubmittedAt: timestamp('review_submitted_at', { mode: 'date', withTimezone: true }),
+    promotedAt: timestamp('promoted_at', { mode: 'date', withTimezone: true }),
+    promotedBy: text('promoted_by').references(() => users.id),
+
     // Ownership
-    owner: text('owner').notNull(), // free-text owner name
+    owner: text('owner').notNull(),
     createdBy: text('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
       .defaultNow()

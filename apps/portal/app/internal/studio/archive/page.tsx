@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   Shirt,
   Scissors,
+  Palette,
   Waves,
   BookMarked,
   Settings,
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 const categoryMeta: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string }> = {
   product: { icon: Shirt, color: "text-blue-600", bg: "bg-blue-50" },
   materials: { icon: Scissors, color: "text-emerald-600", bg: "bg-emerald-50" },
+  color: { icon: Palette, color: "text-pink-600", bg: "bg-pink-50" },
   brand: { icon: Waves, color: "text-violet-600", bg: "bg-violet-50" },
   reference: { icon: BookMarked, color: "text-orange-600", bg: "bg-orange-50" },
   operational: { icon: Settings, color: "text-slate-600", bg: "bg-slate-50" },

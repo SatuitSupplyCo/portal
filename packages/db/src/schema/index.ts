@@ -9,6 +9,8 @@ export * from './packs';
 export * from './tests';
 export * from './sourcing';
 export * from './studio';
+export * from './product-taxonomy';
+export * from './lifecycle';
 export * from './permissions';
 export * from './audit';
 export * from './relations';

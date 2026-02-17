@@ -141,6 +141,31 @@ resource "aws_iam_role_policy" "ecs_task_exec" {
   })
 }
 
+# SES access for sending transactional email (invitations, notifications)
+resource "aws_iam_role_policy" "ecs_task_ses" {
+  name = "ses-send"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "ses:FromAddress" = "noreply@${var.domain_name}"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # ── ECS Service Security Group ───────────────────────────────────────────────
 # Shared SG for all ECS services. Allows inbound from ALB only.
 

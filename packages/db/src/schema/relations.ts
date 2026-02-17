@@ -32,6 +32,31 @@ import {
   studioEntryAttachments,
   studioEntryLinks,
 } from './studio';
+import {
+  productCategories,
+  productSubcategories,
+  productTypes,
+  constructions,
+  materialWeightClasses,
+  sellingWindows,
+  assortmentTenures,
+  fitBlocks,
+  useCases,
+  audienceGenders,
+  audienceAgeGroups,
+  goodsClasses,
+  sizeScales,
+  collections,
+} from './product-taxonomy';
+import {
+  seasons,
+  seasonSlots,
+  skuConcepts,
+  skuConceptTransitions,
+  corePrograms,
+  seasonCoreRefs,
+  seasonColors,
+} from './lifecycle';
 import { documentsAcl, packsAcl, assetsAcl } from './permissions';
 import { publishLog } from './audit';
 
@@ -338,6 +363,10 @@ export const factoryCapabilitiesRelations = relations(
       fields: [factoryCapabilities.factoryId],
       references: [factories.id],
     }),
+    subcategory: one(productSubcategories, {
+      fields: [factoryCapabilities.subcategoryId],
+      references: [productSubcategories.id],
+    }),
   }),
 );
 
@@ -348,6 +377,14 @@ export const factoryCostingRelations = relations(
       fields: [factoryCosting.factoryId],
       references: [factories.id],
     }),
+    subcategory: one(productSubcategories, {
+      fields: [factoryCosting.subcategoryId],
+      references: [productSubcategories.id],
+    }),
+    skuConcept: one(skuConcepts, {
+      fields: [factoryCosting.skuConceptId],
+      references: [skuConcepts.id],
+    }),
   }),
 );
 
@@ -357,6 +394,10 @@ export const factorySamplesRelations = relations(
     factory: one(factories, {
       fields: [factorySamples.factoryId],
       references: [factories.id],
+    }),
+    skuConcept: one(skuConcepts, {
+      fields: [factorySamples.skuConceptId],
+      references: [skuConcepts.id],
     }),
     creator: one(users, {
       fields: [factorySamples.createdBy],
@@ -403,6 +444,10 @@ export const factoryNegotiationsRelations = relations(
       fields: [factoryNegotiations.factoryId],
       references: [factories.id],
     }),
+    subcategory: one(productSubcategories, {
+      fields: [factoryNegotiations.subcategoryId],
+      references: [productSubcategories.id],
+    }),
     negotiator: one(users, {
       fields: [factoryNegotiations.negotiatedBy],
       references: [users.id],
@@ -437,6 +482,10 @@ export const skuFactoryAssignmentsRelations = relations(
       references: [factories.id],
       relationName: 'backupFactory',
     }),
+    skuConcept: one(skuConcepts, {
+      fields: [skuFactoryAssignments.skuConceptId],
+      references: [skuConcepts.id],
+    }),
     creator: one(users, {
       fields: [skuFactoryAssignments.createdBy],
       references: [users.id],
@@ -452,10 +501,26 @@ export const studioEntriesRelations = relations(
     creator: one(users, {
       fields: [studioEntries.createdBy],
       references: [users.id],
+      relationName: 'studioCreator',
+    }),
+    promoter: one(users, {
+      fields: [studioEntries.promotedBy],
+      references: [users.id],
+      relationName: 'studioPromoter',
+    }),
+    targetSeason: one(seasons, {
+      fields: [studioEntries.targetSeasonId],
+      references: [seasons.id],
+    }),
+    collectionRef: one(collections, {
+      fields: [studioEntries.collectionId],
+      references: [collections.id],
     }),
     images: many(studioEntryImages),
     attachments: many(studioEntryAttachments),
     links: many(studioEntryLinks),
+    skuConcepts: many(skuConcepts),
+    seasonColors: many(seasonColors),
   }),
 );
 
@@ -496,6 +561,209 @@ export const studioEntryLinksRelations = relations(
     }),
     creator: one(users, {
       fields: [studioEntryLinks.createdBy],
+      references: [users.id],
+    }),
+  }),
+);
+
+// ─── Product Taxonomy relations ─────────────────────────────────────
+
+export const productCategoriesRelations = relations(
+  productCategories,
+  ({ many }) => ({
+    subcategories: many(productSubcategories),
+  }),
+);
+
+export const productSubcategoriesRelations = relations(
+  productSubcategories,
+  ({ one, many }) => ({
+    category: one(productCategories, {
+      fields: [productSubcategories.categoryId],
+      references: [productCategories.id],
+    }),
+    goodsClassDefault: one(goodsClasses, {
+      fields: [productSubcategories.goodsClassDefaultId],
+      references: [goodsClasses.id],
+    }),
+    productTypes: many(productTypes),
+    factoryCapabilities: many(factoryCapabilities),
+    factoryCosting: many(factoryCosting),
+  }),
+);
+
+export const productTypesRelations = relations(
+  productTypes,
+  ({ one, many }) => ({
+    subcategory: one(productSubcategories, {
+      fields: [productTypes.subcategoryId],
+      references: [productSubcategories.id],
+    }),
+    seasonSlots: many(seasonSlots),
+  }),
+);
+
+export const collectionsRelations = relations(collections, ({ many }) => ({
+  seasonSlots: many(seasonSlots),
+}));
+
+// ─── Lifecycle relations ────────────────────────────────────────────
+
+export const seasonsRelations = relations(seasons, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [seasons.createdBy],
+    references: [users.id],
+  }),
+  slots: many(seasonSlots),
+  coreRefs: many(seasonCoreRefs),
+  colors: many(seasonColors),
+  studioEntries: many(studioEntries),
+}));
+
+export const seasonSlotsRelations = relations(
+  seasonSlots,
+  ({ one, many }) => ({
+    season: one(seasons, {
+      fields: [seasonSlots.seasonId],
+      references: [seasons.id],
+    }),
+    productType: one(productTypes, {
+      fields: [seasonSlots.productTypeId],
+      references: [productTypes.id],
+    }),
+    collection: one(collections, {
+      fields: [seasonSlots.collectionId],
+      references: [collections.id],
+    }),
+    audienceGender: one(audienceGenders, {
+      fields: [seasonSlots.audienceGenderId],
+      references: [audienceGenders.id],
+    }),
+    audienceAgeGroup: one(audienceAgeGroups, {
+      fields: [seasonSlots.audienceAgeGroupId],
+      references: [audienceAgeGroups.id],
+    }),
+    sellingWindow: one(sellingWindows, {
+      fields: [seasonSlots.sellingWindowId],
+      references: [sellingWindows.id],
+    }),
+    assortmentTenure: one(assortmentTenures, {
+      fields: [seasonSlots.assortmentTenureId],
+      references: [assortmentTenures.id],
+    }),
+    creator: one(users, {
+      fields: [seasonSlots.createdBy],
+      references: [users.id],
+    }),
+    skuConcept: one(skuConcepts, {
+      fields: [seasonSlots.id],
+      references: [skuConcepts.seasonSlotId],
+    }),
+  }),
+);
+
+export const skuConceptsRelations = relations(
+  skuConcepts,
+  ({ one, many }) => ({
+    seasonSlot: one(seasonSlots, {
+      fields: [skuConcepts.seasonSlotId],
+      references: [seasonSlots.id],
+    }),
+    sourceStudioEntry: one(studioEntries, {
+      fields: [skuConcepts.sourceStudioEntryId],
+      references: [studioEntries.id],
+    }),
+    construction: one(constructions, {
+      fields: [skuConcepts.constructionId],
+      references: [constructions.id],
+    }),
+    materialWeightClass: one(materialWeightClasses, {
+      fields: [skuConcepts.materialWeightClassId],
+      references: [materialWeightClasses.id],
+    }),
+    fitBlock: one(fitBlocks, {
+      fields: [skuConcepts.fitBlockId],
+      references: [fitBlocks.id],
+    }),
+    useCase: one(useCases, {
+      fields: [skuConcepts.useCaseId],
+      references: [useCases.id],
+    }),
+    goodsClass: one(goodsClasses, {
+      fields: [skuConcepts.goodsClassId],
+      references: [goodsClasses.id],
+    }),
+    sizeScale: one(sizeScales, {
+      fields: [skuConcepts.sizeScaleId],
+      references: [sizeScales.id],
+    }),
+    creator: one(users, {
+      fields: [skuConcepts.createdBy],
+      references: [users.id],
+    }),
+    approver: one(users, {
+      fields: [skuConcepts.approvedBy],
+      references: [users.id],
+    }),
+    transitions: many(skuConceptTransitions),
+    factorySamples: many(factorySamples),
+    factoryCosting: many(factoryCosting),
+    factoryAssignments: many(skuFactoryAssignments),
+  }),
+);
+
+export const skuConceptTransitionsRelations = relations(
+  skuConceptTransitions,
+  ({ one }) => ({
+    skuConcept: one(skuConcepts, {
+      fields: [skuConceptTransitions.skuConceptId],
+      references: [skuConcepts.id],
+    }),
+    actor: one(users, {
+      fields: [skuConceptTransitions.actorUserId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const coreProgramsRelations = relations(
+  corePrograms,
+  ({ one, many }) => ({
+    creator: one(users, {
+      fields: [corePrograms.createdBy],
+      references: [users.id],
+    }),
+    seasonRefs: many(seasonCoreRefs),
+  }),
+);
+
+export const seasonCoreRefsRelations = relations(
+  seasonCoreRefs,
+  ({ one }) => ({
+    season: one(seasons, {
+      fields: [seasonCoreRefs.seasonId],
+      references: [seasons.id],
+    }),
+    coreProgram: one(corePrograms, {
+      fields: [seasonCoreRefs.coreProgramId],
+      references: [corePrograms.id],
+    }),
+  }),
+);
+
+export const seasonColorsRelations = relations(
+  seasonColors,
+  ({ one }) => ({
+    season: one(seasons, {
+      fields: [seasonColors.seasonId],
+      references: [seasons.id],
+    }),
+    studioEntry: one(studioEntries, {
+      fields: [seasonColors.studioEntryId],
+      references: [studioEntries.id],
+    }),
+    creator: one(users, {
+      fields: [seasonColors.createdBy],
       references: [users.id],
     }),
   }),

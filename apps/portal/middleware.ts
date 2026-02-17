@@ -28,6 +28,11 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
+  // Invitation pages are public (landing page handles auth redirect itself)
+  if (pathname.startsWith("/invite")) {
+    return NextResponse.next()
+  }
+
   // ── Require authentication ───────────────────────────────────────
   if (!req.auth) {
     const signInUrl = new URL("/auth/signin", req.url)

@@ -101,6 +101,7 @@ resource "aws_ecs_task_definition" "portal" {
         { name = "AUTH_TRUST_HOST", value = "true" },
         { name = "AUTH_ALLOWED_DOMAIN", value = "satuitsupply.com" },
         { name = "REDIS_URL", value = "redis://${local.infra.redis_endpoint}:${local.infra.redis_port}" },
+        { name = "SES_FROM_EMAIL", value = "Satuit Supply <noreply@${var.domain_name}>" },
       ]
 
       secrets = [

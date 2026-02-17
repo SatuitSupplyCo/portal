@@ -1,5 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { db } from "@repo/db/client"
+import { studioEntries } from "@repo/db/schema"
+import { eq, count, desc } from "drizzle-orm"
 import { DocPageShell } from "@/components/nav/DocPageShell"
 import {
   Palette,
@@ -17,6 +20,8 @@ import {
   ImageIcon,
   ArrowRight,
   MoreHorizontal,
+  Eye,
+  Send,
 } from "lucide-react"
 import { Button } from "@repo/ui/button"
 
@@ -52,6 +57,13 @@ const categoryMeta: Record<
     bg: "bg-emerald-50",
     href: "/internal/studio/materials",
   },
+  color: {
+    label: "Color",
+    icon: Palette,
+    color: "text-pink-600",
+    bg: "bg-pink-50",
+    href: "/internal/studio/color",
+  },
   brand: {
     label: "Brand",
     icon: Waves,
@@ -81,46 +93,47 @@ const statusColors: Record<string, string> = {
   raw: "bg-slate-100 text-slate-700",
   exploring: "bg-blue-100 text-blue-800",
   prototyping: "bg-violet-100 text-violet-800",
-  linked: "bg-emerald-100 text-emerald-800",
+  ready_for_review: "bg-amber-100 text-amber-800",
+  revisions_requested: "bg-red-100 text-red-700",
+  promoted: "bg-emerald-100 text-emerald-800",
   archived: "bg-gray-100 text-gray-500",
 }
 
-// ─── KPI Cards ───────────────────────────────────────────────────────
+const statusLabels: Record<string, string> = {
+  raw: "Raw",
+  exploring: "Exploring",
+  prototyping: "Prototyping",
+  ready_for_review: "Ready for Review",
+  revisions_requested: "Revisions Requested",
+  promoted: "Promoted",
+  archived: "Archived",
+}
 
-const kpis = [
-  {
-    label: "Raw Ideas",
-    value: "—",
-    sublabel: "Awaiting evaluation",
-    icon: Lightbulb,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-  },
-  {
-    label: "Exploring",
-    value: "—",
-    sublabel: "Under discussion",
-    icon: Sparkles,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-  },
-  {
-    label: "Prototyping",
-    value: "—",
-    sublabel: "Approved for sampling",
-    icon: TrendingUp,
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-  },
-  {
-    label: "Linked",
-    value: "—",
-    sublabel: "Connected to pipeline",
-    icon: CheckCircle2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-  },
-]
+// ─── Data fetching ──────────────────────────────────────────────────
+
+async function getStudioData() {
+  // Counts by status
+  const statusCounts = await db
+    .select({ status: studioEntries.status, count: count() })
+    .from(studioEntries)
+    .groupBy(studioEntries.status)
+
+  const countMap: Record<string, number> = {}
+  for (const row of statusCounts) {
+    countMap[row.status] = row.count
+  }
+
+  // Recent entries
+  const recent = await db.query.studioEntries.findMany({
+    orderBy: [desc(studioEntries.createdAt)],
+    limit: 10,
+    with: {
+      images: { limit: 1 },
+    },
+  })
+
+  return { countMap, recent }
+}
 
 // ─── Empty state ─────────────────────────────────────────────────────
 
@@ -181,20 +194,61 @@ function EmptyState() {
 
 // ─── Page ────────────────────────────────────────────────────────────
 
-export default function StudioOverviewPage() {
-  // TODO: Replace with real data from db.query.studioEntries
-  const recentEntries: {
-    id: string
-    title: string
-    category: string
-    status: string
-    owner: string
-    createdAt: string
-    hasImage: boolean
-    description: string
-  }[] = []
+export default async function StudioOverviewPage() {
+  const { countMap, recent } = await getStudioData()
 
-  const hasEntries = recentEntries.length > 0
+  const hasEntries = recent.length > 0
+
+  const kpis = [
+    {
+      label: "Raw Ideas",
+      value: countMap.raw ?? 0,
+      sublabel: "Awaiting evaluation",
+      icon: Lightbulb,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      label: "Exploring",
+      value: countMap.exploring ?? 0,
+      sublabel: "Under discussion",
+      icon: Sparkles,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "Prototyping",
+      value: countMap.prototyping ?? 0,
+      sublabel: "Being refined",
+      icon: TrendingUp,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+    {
+      label: "Ready for Review",
+      value: countMap.ready_for_review ?? 0,
+      sublabel: "Awaiting Product Lead",
+      icon: Eye,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      label: "Revisions",
+      value: countMap.revisions_requested ?? 0,
+      sublabel: "Needs updates",
+      icon: Send,
+      color: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      label: "Promoted",
+      value: countMap.promoted ?? 0,
+      sublabel: "Linked to concepts",
+      icon: CheckCircle2,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+  ]
 
   return (
     <DocPageShell breadcrumbs={[{ label: "Studio" }]}>
@@ -217,7 +271,7 @@ export default function StudioOverviewPage() {
 
         {/* ═══════ KPI STRIP ═══════ */}
         <div className="px-8 py-5 md:px-12 border-b bg-muted/20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {kpis.map((kpi) => (
               <div key={kpi.label} className="flex items-center gap-3">
                 <div
@@ -238,10 +292,30 @@ export default function StudioOverviewPage() {
           </div>
         </div>
 
+        {/* ═══════ REVIEW QUEUE (visible when items need review) ═══════ */}
+        {(countMap.ready_for_review ?? 0) > 0 && (
+          <div className="px-8 py-5 md:px-12 border-b bg-amber-50/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-amber-600" />
+                <p className="text-sm font-medium text-amber-800">
+                  {countMap.ready_for_review} item{countMap.ready_for_review !== 1 ? 's' : ''} awaiting review
+                </p>
+              </div>
+              <Link
+                href="/internal/studio/product"
+                className="text-xs text-amber-700 hover:text-amber-900 transition-colors flex items-center gap-1"
+              >
+                Review Queue
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* ═══════ RECENT ADDITIONS / EMPTY STATE ═══════ */}
         {hasEntries ? (
           <div className="px-8 py-6 md:px-12">
-            {/* Section label */}
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Recent Additions
@@ -255,13 +329,11 @@ export default function StudioOverviewPage() {
               </Link>
             </div>
 
-            {/* Feed */}
             <div className="flex flex-col gap-2">
-              {recentEntries.map((entry) => {
+              {recent.map((entry) => {
                 const meta = categoryMeta[entry.category] ?? categoryMeta.product
                 const CatIcon = meta.icon
-                const statusClass =
-                  statusColors[entry.status] ?? statusColors.raw
+                const statusClass = statusColors[entry.status] ?? statusColors.raw
 
                 return (
                   <div
@@ -270,7 +342,7 @@ export default function StudioOverviewPage() {
                   >
                     {/* Thumbnail placeholder */}
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted shrink-0">
-                      {entry.hasImage ? (
+                      {entry.images.length > 0 ? (
                         <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
                       ) : (
                         <CatIcon className={`h-5 w-5 ${meta.color}`} />
@@ -286,7 +358,7 @@ export default function StudioOverviewPage() {
                         <span
                           className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${statusClass}`}
                         >
-                          {entry.status}
+                          {statusLabels[entry.status] ?? entry.status}
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground truncate">
@@ -312,7 +384,10 @@ export default function StudioOverviewPage() {
                         {entry.owner}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        {entry.createdAt}
+                        {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </p>
                     </div>
 

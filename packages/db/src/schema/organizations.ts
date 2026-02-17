@@ -13,7 +13,7 @@ import {
   unique,
   index,
 } from 'drizzle-orm/pg-core';
-import { orgTypeEnum, orgStatusEnum, orgRoleEnum, portalRoleEnum, invitationStatusEnum } from './enums';
+import { orgTypeEnum, orgStatusEnum, orgRoleEnum, portalRoleEnum, productRoleEnum, invitationStatusEnum } from './enums';
 import { users } from './auth';
 
 // ─── Organizations ───────────────────────────────────────────────────
@@ -74,6 +74,7 @@ export const invitations = pgTable(
       onDelete: 'cascade',
     }),
     role: portalRoleEnum('role').notNull(),
+    productRole: productRoleEnum('product_role'),
     orgRole: orgRoleEnum('org_role'),
     status: invitationStatusEnum('status').notNull().default('pending'),
     invitedBy: text('invited_by')

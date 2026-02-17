@@ -28,7 +28,6 @@ import {
 import {
   factoryStatusEnum,
   factoryTypeEnum,
-  factoryCategoryEnum,
   sampleTypeEnum,
   sampleDecisionEnum,
   relationshipStageEnum,
@@ -37,6 +36,7 @@ import {
   negotiationOutcomeEnum,
 } from './enums';
 import { users } from './auth';
+import { productSubcategories } from './product-taxonomy';
 
 // ─── 1. Factories (Primary Entity) ─────────────────────────────────
 
@@ -121,7 +121,9 @@ export const factoryCapabilities = pgTable(
       .notNull()
       .references(() => factories.id, { onDelete: 'cascade' }),
 
-    category: factoryCategoryEnum('category').notNull(),
+    subcategoryId: uuid('subcategory_id')
+      .notNull()
+      .references(() => productSubcategories.id),
     specialty: text('specialty'), // e.g. "8.5 oz heavyweight jersey"
     inHousePatterning: boolean('in_house_patterning')
       .notNull()
@@ -139,7 +141,7 @@ export const factoryCapabilities = pgTable(
   },
   (table) => [
     index('factory_capabilities_factory_idx').on(table.factoryId),
-    index('factory_capabilities_category_idx').on(table.category),
+    index('factory_capabilities_subcategory_idx').on(table.subcategoryId),
   ],
 );
 
@@ -153,7 +155,9 @@ export const factoryCosting = pgTable(
       .notNull()
       .references(() => factories.id, { onDelete: 'cascade' }),
 
-    category: factoryCategoryEnum('category').notNull(),
+    subcategoryId: uuid('subcategory_id')
+      .notNull()
+      .references(() => productSubcategories.id),
 
     // FOB range
     targetFobRangeLow: decimal('target_fob_range_low', {
@@ -192,6 +196,7 @@ export const factoryCosting = pgTable(
     // Viability
     marginViabilityScore: integer('margin_viability_score'), // 1–5
 
+    skuConceptId: uuid('sku_concept_id'), // FK to sku_concepts — defined in relations
     season: text('season'), // e.g. "FW25", "SS26"
     notes: text('notes'),
 
@@ -205,7 +210,7 @@ export const factoryCosting = pgTable(
   },
   (table) => [
     index('factory_costing_factory_idx').on(table.factoryId),
-    index('factory_costing_category_idx').on(table.category),
+    index('factory_costing_subcategory_idx').on(table.subcategoryId),
   ],
 );
 
@@ -219,8 +224,9 @@ export const factorySamples = pgTable(
       .notNull()
       .references(() => factories.id, { onDelete: 'cascade' }),
 
-    skuId: text('sku_id'), // Reference to assortment SKU (future FK)
-    techPackId: uuid('tech_pack_id'), // Reference to pack (future FK)
+    skuId: text('sku_id'),
+    skuConceptId: uuid('sku_concept_id'), // FK to sku_concepts — defined in relations
+    techPackId: uuid('tech_pack_id'),
 
     sampleType: sampleTypeEnum('sample_type').notNull(),
 
@@ -395,7 +401,9 @@ export const factoryNegotiations = pgTable(
       .references(() => factories.id, { onDelete: 'cascade' }),
 
     season: text('season'),
-    category: factoryCategoryEnum('category'),
+    subcategoryId: uuid('subcategory_id').references(
+      () => productSubcategories.id,
+    ),
     subject: text('subject').notNull(), // e.g. "MOQ reduction", "payment terms"
 
     // What happened
@@ -460,6 +468,7 @@ export const skuFactoryAssignments = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     skuId: text('sku_id').notNull(),
+    skuConceptId: uuid('sku_concept_id'), // FK to sku_concepts — defined in relations
     primaryFactoryId: uuid('primary_factory_id')
       .notNull()
       .references(() => factories.id),

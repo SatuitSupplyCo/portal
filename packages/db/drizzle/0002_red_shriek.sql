@@ -1,0 +1,1 @@
+ALTER TABLE "season_slots" ALTER COLUMN "collection" DROP NOT NULL;

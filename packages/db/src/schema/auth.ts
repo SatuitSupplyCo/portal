@@ -13,7 +13,7 @@ import {
   uuid,
   index,
 } from 'drizzle-orm/pg-core';
-import { portalRoleEnum } from './enums';
+import { portalRoleEnum, productRoleEnum } from './enums';
 
 // ─── Users ───────────────────────────────────────────────────────────
 
@@ -31,6 +31,7 @@ export const users = pgTable(
 
     // Portal extensions
     role: portalRoleEnum('role').notNull().default('internal_viewer'),
+    productRole: productRoleEnum('product_role'), // lifecycle permissions (nullable)
     orgId: uuid('org_id'), // FK to organizations — defined in relations (avoids circular import)
 
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })

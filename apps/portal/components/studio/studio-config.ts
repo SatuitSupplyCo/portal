@@ -1,5 +1,6 @@
 import {
   Palette,
+  Pipette,
   Shirt,
   Scissors,
   Waves,
@@ -36,6 +37,12 @@ export const studioSections: StudioSection[] = [
     href: "/internal/studio/materials",
     icon: Scissors,
     description: "Fabric-first thinking and mill references",
+  },
+  {
+    title: "Color",
+    href: "/internal/studio/color",
+    icon: Pipette,
+    description: "Palette exploration and seasonal color direction",
   },
   {
     title: "Brand",

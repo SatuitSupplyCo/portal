@@ -52,6 +52,7 @@ export default function CollectionPage({
     <DocPageShell
       breadcrumbs={[
         { label: "Product", href: "/internal/product" },
+        { label: "Collections" },
         { label: collection.name },
       ]}
     >

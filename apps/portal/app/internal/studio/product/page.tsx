@@ -1,16 +1,18 @@
 import type { Metadata } from "next"
+import { db } from "@repo/db/client"
+import { studioEntries } from "@repo/db/schema"
+import { eq, desc } from "drizzle-orm"
 import { DocPageShell } from "@/components/nav/DocPageShell"
 import {
   Shirt,
   Plus,
   Search,
   Filter,
-  LayoutGrid,
-  List,
   Tag,
   User,
   Calendar,
   ArrowUpDown,
+  ImageIcon,
 } from "lucide-react"
 import { Button } from "@repo/ui/button"
 
@@ -26,8 +28,20 @@ const statusColors: Record<string, string> = {
   raw: "bg-slate-100 text-slate-700",
   exploring: "bg-blue-100 text-blue-800",
   prototyping: "bg-violet-100 text-violet-800",
-  linked: "bg-emerald-100 text-emerald-800",
+  ready_for_review: "bg-amber-100 text-amber-800",
+  revisions_requested: "bg-red-100 text-red-700",
+  promoted: "bg-emerald-100 text-emerald-800",
   archived: "bg-gray-100 text-gray-500",
+}
+
+const statusLabels: Record<string, string> = {
+  raw: "Raw",
+  exploring: "Exploring",
+  prototyping: "Prototyping",
+  ready_for_review: "In Review",
+  revisions_requested: "Revisions",
+  promoted: "Promoted",
+  archived: "Archived",
 }
 
 // ─── Empty state ─────────────────────────────────────────────────────
@@ -52,45 +66,20 @@ function EmptyState() {
   )
 }
 
-// ─── Table header ────────────────────────────────────────────────────
-
-function TableHeader() {
-  const columns = [
-    { label: "", sortable: false, width: "w-12" },
-    { label: "Title", sortable: true },
-    { label: "Silhouette", sortable: true },
-    { label: "Status", sortable: true },
-    { label: "Owner", sortable: true },
-    { label: "Relevance", sortable: true },
-    { label: "Season", sortable: true },
-    { label: "Added", sortable: true },
-    { label: "", sortable: false },
-  ]
-
-  return (
-    <thead>
-      <tr className="border-b">
-        {columns.map((col, i) => (
-          <th
-            key={col.label || `col-${i}`}
-            className={`text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 ${col.width ?? ""}`}
-          >
-            <span className="flex items-center gap-1">
-              {col.label}
-              {col.sortable && col.label && (
-                <ArrowUpDown className="h-3 w-3 opacity-40" />
-              )}
-            </span>
-          </th>
-        ))}
-      </tr>
-    </thead>
-  )
-}
-
 // ─── Page ────────────────────────────────────────────────────────────
 
-export default function StudioProductPage() {
+export default async function StudioProductPage() {
+  const entries = await db.query.studioEntries.findMany({
+    where: eq(studioEntries.category, 'product'),
+    orderBy: [desc(studioEntries.createdAt)],
+    with: {
+      images: { limit: 1 },
+      collectionRef: true,
+    },
+  })
+
+  const hasEntries = entries.length > 0
+
   return (
     <DocPageShell
       breadcrumbs={[
@@ -112,8 +101,8 @@ export default function StudioProductPage() {
                 </h1>
               </div>
               <p className="text-sm text-muted-foreground mt-1 ml-11">
-                Silhouette and construction exploration. Reference garments, fit
-                observations, and construction details worth testing.
+                Silhouette and construction exploration. Ideas move through review
+                and promotion to become SKU concepts.
               </p>
             </div>
             <Button>
@@ -140,7 +129,7 @@ export default function StudioProductPage() {
             </Button>
             <Button variant="outline" size="sm">
               <Tag className="h-3 w-3" />
-              Tags
+              Collection
             </Button>
             <Button variant="outline" size="sm">
               <User className="h-3 w-3" />
@@ -150,25 +139,111 @@ export default function StudioProductPage() {
               <Calendar className="h-3 w-3" />
               Season
             </Button>
-
-            <div className="ml-auto flex items-center gap-1 border rounded-md p-0.5">
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-accent">
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <List className="h-3.5 w-3.5" />
-              </Button>
-            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-8 md:px-12">
-          <table className="w-full">
-            <TableHeader />
-          </table>
+        {hasEntries ? (
+          <div className="px-8 md:px-12">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 w-12" />
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Title <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Collection <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Status <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Complexity <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Owner <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                  <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">
+                    <span className="flex items-center gap-1">Added <ArrowUpDown className="h-3 w-3 opacity-40" /></span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className="border-b hover:bg-accent/30 transition-colors cursor-pointer"
+                  >
+                    {/* Image */}
+                    <td className="px-4 py-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                        {entry.images.length > 0 ? (
+                          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground/40" />
+                        ) : (
+                          <Shirt className="h-3.5 w-3.5 text-blue-600" />
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Title + intent */}
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium truncate max-w-[200px]">
+                        {entry.title}
+                      </p>
+                      {entry.intent && (
+                        <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                          {entry.intent}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Collection tag */}
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {entry.collectionRef?.name ?? "—"}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[entry.status] ?? ''}`}>
+                        {statusLabels[entry.status] ?? entry.status}
+                      </span>
+                    </td>
+
+                    {/* Complexity */}
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {entry.estimatedComplexity ? `${entry.estimatedComplexity}/5` : "—"}
+                      </span>
+                    </td>
+
+                    {/* Owner */}
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground">
+                        {entry.owner}
+                      </span>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
           <EmptyState />
-        </div>
+        )}
       </main>
     </DocPageShell>
   )
