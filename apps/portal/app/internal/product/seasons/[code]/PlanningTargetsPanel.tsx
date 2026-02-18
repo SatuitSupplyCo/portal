@@ -192,7 +192,7 @@ function BreakdownView({
       )}
 
       {/* Two-column layout: values list + AI advice panel */}
-      <div className="grid grid-cols-[1fr_1fr] gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8">
         {/* Left: dimension values */}
         <div>
           {allKeys.map((key) => {
