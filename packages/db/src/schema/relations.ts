@@ -58,6 +58,14 @@ import {
   seasonColors,
 } from './lifecycle';
 import { documentsAcl, packsAcl, assetsAcl } from './permissions';
+import {
+  permissions,
+  roles,
+  rolePermissions,
+  userRoles,
+  resourceGrants,
+  rbacAuditLog,
+} from './rbac';
 import { publishLog } from './audit';
 
 // ─── Auth relations ──────────────────────────────────────────────────
@@ -70,6 +78,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   orgMemberships: many(orgMemberships),
+  userRoles: many(userRoles),
   invitationsSent: many(invitations),
   documents: many(documents),
   canonDocuments: many(canonDocuments),
@@ -768,3 +777,56 @@ export const seasonColorsRelations = relations(
     }),
   }),
 );
+
+// ─── RBAC relations ─────────────────────────────────────────────────
+
+export const rolesRelations = relations(roles, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+  userRoles: many(userRoles),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(
+  rolePermissions,
+  ({ one }) => ({
+    role: one(roles, {
+      fields: [rolePermissions.roleId],
+      references: [roles.id],
+    }),
+    permission: one(permissions, {
+      fields: [rolePermissions.permissionCode],
+      references: [permissions.code],
+    }),
+  }),
+);
+
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoles.userId],
+    references: [users.id],
+  }),
+  role: one(roles, {
+    fields: [userRoles.roleId],
+    references: [roles.id],
+  }),
+}));
+
+export const resourceGrantsRelations = relations(
+  resourceGrants,
+  ({ one }) => ({
+    grantedByUser: one(users, {
+      fields: [resourceGrants.grantedBy],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const rbacAuditLogRelations = relations(rbacAuditLog, ({ one }) => ({
+  actor: one(users, {
+    fields: [rbacAuditLog.actorUserId],
+    references: [users.id],
+  }),
+}));

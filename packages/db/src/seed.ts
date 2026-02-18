@@ -26,8 +26,13 @@ import {
   goodsClasses,
   sizeScales,
   collections,
+  permissions,
+  roles,
+  rolePermissions,
+  userRoles,
+  users,
 } from "./schema"
-import { eq } from "drizzle-orm"
+import { eq, and, inArray } from "drizzle-orm"
 
 // ─── Block builder helpers ───────────────────────────────────────────
 
@@ -697,6 +702,179 @@ export async function seedProductTaxonomy() {
   console.log("")
 }
 
+// ─── RBAC Seed ──────────────────────────────────────────────────────
+
+const PERMISSION_DEFS: Array<{ code: string; groupKey: string; label: string; description: string }> = [
+  // Studio
+  { code: "studio.submit", groupKey: "studio", label: "Submit to Studio", description: "Create and submit studio entries" },
+  { code: "studio.review", groupKey: "studio", label: "Submit for Review", description: "Submit studio entries for review" },
+  { code: "studio.promote", groupKey: "studio", label: "Promote to Concept", description: "Promote studio entries to SKU concepts" },
+
+  // Seasons
+  { code: "seasons.manage", groupKey: "seasons", label: "Manage Seasons", description: "Create, update, and lock seasons" },
+  { code: "seasons.lock", groupKey: "seasons", label: "Lock Seasons", description: "Lock seasons to prevent further changes" },
+  { code: "slots.create", groupKey: "seasons", label: "Create Slots", description: "Add slots to seasons" },
+  { code: "slots.fill", groupKey: "seasons", label: "Fill Slots", description: "Fill season slots with concepts" },
+
+  // Colors
+  { code: "colors.manage", groupKey: "colors", label: "Manage Colors", description: "Add/remove colors from season palettes" },
+  { code: "colors.confirm", groupKey: "colors", label: "Confirm Colors", description: "Confirm proposed season colors" },
+
+  // Concepts
+  { code: "concepts.advance", groupKey: "concepts", label: "Advance Concepts", description: "Move concepts through lifecycle stages" },
+  { code: "concepts.kill", groupKey: "concepts", label: "Kill Concepts", description: "Retire/kill active concepts" },
+  { code: "concepts.override", groupKey: "concepts", label: "Override Concepts", description: "Override concept constraints (fabric, block changes)" },
+
+  // Core Programs
+  { code: "core_programs.manage", groupKey: "core_programs", label: "Manage Core Programs", description: "Create and update core programs" },
+
+  // Sourcing
+  { code: "sourcing.view", groupKey: "sourcing", label: "View Sourcing", description: "View factory directory and sourcing data" },
+  { code: "sourcing.manage", groupKey: "sourcing", label: "Manage Sourcing", description: "Create and manage factory records" },
+
+  // Visibility
+  { code: "costing.view", groupKey: "visibility", label: "View Costing", description: "View factory costing and pricing" },
+  { code: "margins.view", groupKey: "visibility", label: "View Margins", description: "View margin data and targets" },
+]
+
+const SYSTEM_ROLE_DEFS: Array<{
+  slug: string
+  name: string
+  description: string
+  permissionCodes: string[]
+}> = [
+  {
+    slug: "founder",
+    name: "Founder",
+    description: "Full access to all product lifecycle capabilities",
+    permissionCodes: PERMISSION_DEFS.map((p) => p.code),
+  },
+  {
+    slug: "product-lead",
+    name: "Product Lead",
+    description: "Manages seasons, concepts, and product lifecycle (except kill/override)",
+    permissionCodes: PERMISSION_DEFS
+      .map((p) => p.code)
+      .filter((c) => c !== "concepts.kill" && c !== "concepts.override"),
+  },
+  {
+    slug: "studio-contributor",
+    name: "Studio Contributor",
+    description: "Can create and submit studio entries for review",
+    permissionCodes: ["studio.submit", "studio.review"],
+  },
+  {
+    slug: "external-designer",
+    name: "External Designer",
+    description: "External collaborator who can submit to the studio",
+    permissionCodes: ["studio.submit"],
+  },
+  {
+    slug: "factory-partner",
+    name: "Factory Partner",
+    description: "Factory partner with view access to sourcing and costing",
+    permissionCodes: ["sourcing.view", "costing.view"],
+  },
+]
+
+const PRODUCT_ROLE_TO_SLUG: Record<string, string> = {
+  founder: "founder",
+  product_lead: "product-lead",
+  studio_contributor: "studio-contributor",
+  external_designer: "external-designer",
+  factory_partner: "factory-partner",
+}
+
+export async function seedRbac() {
+  console.log("Seeding RBAC permissions and roles...\n")
+
+  // 1. Upsert permissions
+  const existingPerms = await db.select().from(permissions)
+  const existingCodes = new Set(existingPerms.map((p) => p.code))
+
+  const newPerms = PERMISSION_DEFS.filter((p) => !existingCodes.has(p.code))
+  if (newPerms.length > 0) {
+    await db.insert(permissions).values(newPerms)
+    console.log(`  Created ${newPerms.length} permissions`)
+  } else {
+    console.log(`  All ${PERMISSION_DEFS.length} permissions already exist`)
+  }
+
+  // 2. Upsert system roles
+  for (const def of SYSTEM_ROLE_DEFS) {
+    let role = await db.query.roles.findFirst({
+      where: (r, { eq: e }) => e(r.slug, def.slug),
+    })
+
+    if (!role) {
+      const [created] = await db
+        .insert(roles)
+        .values({
+          name: def.name,
+          slug: def.slug,
+          description: def.description,
+          isSystem: true,
+        })
+        .returning()
+      role = created!
+      console.log(`  Created system role: ${def.name}`)
+    } else {
+      console.log(`  Found existing role: ${def.name}`)
+    }
+
+    // Sync permissions for this role
+    const existingRolePerms = await db
+      .select()
+      .from(rolePermissions)
+      .where(eq(rolePermissions.roleId, role.id))
+    const existingPermCodes = new Set(existingRolePerms.map((rp) => rp.permissionCode))
+
+    const toAdd = def.permissionCodes.filter((c) => !existingPermCodes.has(c))
+    if (toAdd.length > 0) {
+      await db.insert(rolePermissions).values(
+        toAdd.map((code) => ({ roleId: role!.id, permissionCode: code })),
+      )
+      console.log(`    Added ${toAdd.length} permissions to ${def.name}`)
+    }
+  }
+
+  // 3. Migrate existing product_role values to user_roles
+  const allUsers = await db.select().from(users)
+  const roleMap = new Map<string, string>()
+
+  const allRoles = await db.select().from(roles)
+  for (const r of allRoles) {
+    roleMap.set(r.slug, r.id)
+  }
+
+  let migratedCount = 0
+  for (const user of allUsers) {
+    if (!user.productRole) continue
+
+    const roleSlug = PRODUCT_ROLE_TO_SLUG[user.productRole]
+    if (!roleSlug) continue
+
+    const roleId = roleMap.get(roleSlug)
+    if (!roleId) continue
+
+    const existing = await db.query.userRoles.findFirst({
+      where: (ur, { eq: e, and: a }) =>
+        a(e(ur.userId, user.id), e(ur.roleId, roleId)),
+    })
+
+    if (!existing) {
+      await db.insert(userRoles).values({ userId: user.id, roleId })
+      migratedCount++
+    }
+  }
+
+  if (migratedCount > 0) {
+    console.log(`  Migrated ${migratedCount} users from product_role to user_roles`)
+  }
+
+  console.log("")
+}
+
 export async function seed() {
   console.log("Seeding brand documents...\n")
 
@@ -750,6 +928,7 @@ export async function seed() {
   await seedSeasons()
   await seedCorePrograms()
   await seedProductTaxonomy()
+  await seedRbac()
 
   console.log("Done!")
 }

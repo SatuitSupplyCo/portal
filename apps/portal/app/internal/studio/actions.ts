@@ -4,7 +4,7 @@ import { auth } from '@repo/auth';
 import { db } from '@repo/db/client';
 import { studioEntries, seasons, users } from '@repo/db/schema';
 import { revalidatePath } from 'next/cache';
-import { canSubmitStudio, type ProductRole } from '@/lib/permissions';
+import { hasPermission, type SessionUser } from '@/lib/permissions';
 
 type ActionResult = {
   success: boolean;
@@ -12,11 +12,10 @@ type ActionResult = {
   data?: Record<string, unknown>;
 };
 
-async function getSessionUser() {
+async function getSessionUser(): Promise<SessionUser> {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
-  // Verify the session user still exists in the DB (JWT can outlive a DB reset)
   const dbUser = await db.query.users.findFirst({
     where: (u, { eq }) => eq(u.id, session.user.id),
   });
@@ -26,7 +25,14 @@ async function getSessionUser() {
     );
   }
 
-  return session.user;
+  return {
+    id: session.user.id,
+    role: session.user.role,
+    permissions: session.user.permissions ?? [],
+    orgId: session.user.orgId,
+    name: dbUser.name,
+    email: dbUser.email,
+  };
 }
 
 export async function createStudioEntry(data: {
@@ -42,7 +48,7 @@ export async function createStudioEntry(data: {
   categoryMetadata?: Record<string, unknown>;
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canSubmitStudio(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'studio.submit')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 

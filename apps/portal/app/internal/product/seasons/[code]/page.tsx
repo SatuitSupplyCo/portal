@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { auth } from "@repo/auth"
 import { db } from "@repo/db/client"
+import { hasResourceAccess } from "@/lib/permissions"
 import {
   seasons,
   studioEntries,
@@ -142,6 +144,19 @@ export default async function SeasonDetailPage({
   })
 
   if (!season) notFound()
+
+  // Check resource-level access
+  const session = await auth()
+  if (session?.user) {
+    const user = {
+      id: session.user.id,
+      role: session.user.role,
+      permissions: session.user.permissions ?? [],
+      orgId: session.user.orgId,
+    }
+    const canAccess = await hasResourceAccess(user, 'season', season.id)
+    if (!canAccess) notFound()
+  }
 
   // Fetch taxonomy data for AddSlotDialog and Assortment Mix
   const [

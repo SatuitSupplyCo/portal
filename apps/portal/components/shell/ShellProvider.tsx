@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -32,9 +31,9 @@ interface ShellContextValue {
   rightRailContent: ReactNode
   setRightRailContent: (node: ReactNode) => void
 
-  // Mobile nav drawer
-  mobileNavOpen: boolean
-  setMobileNavOpen: (open: boolean) => void
+  // Section-level mobile nav (drives sidebar Sheet on mobile)
+  sectionNavOpen: boolean
+  setSectionNavOpen: (open: boolean) => void
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null)
@@ -46,7 +45,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [actions, setActions] = useState<ReactNode>(null)
   const [rightRailOpen, setRightRailOpen] = useState(false)
   const [rightRailContent, setRightRailContent] = useState<ReactNode>(null)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [sectionNavOpen, setSectionNavOpen] = useState(false)
 
   return (
     <ShellContext.Provider
@@ -59,8 +58,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
         setRightRailOpen,
         rightRailContent,
         setRightRailContent,
-        mobileNavOpen,
-        setMobileNavOpen,
+        sectionNavOpen,
+        setSectionNavOpen,
       }}
     >
       {children}

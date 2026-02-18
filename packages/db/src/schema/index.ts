@@ -12,5 +12,6 @@ export * from './studio';
 export * from './product-taxonomy';
 export * from './lifecycle';
 export * from './permissions';
+export * from './rbac';
 export * from './audit';
 export * from './relations';

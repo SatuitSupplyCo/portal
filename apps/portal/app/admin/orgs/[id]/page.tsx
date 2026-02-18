@@ -3,7 +3,6 @@ import { db } from "@repo/db/client"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { SetBreadcrumbs } from "@/components/nav/SetBreadcrumbs"
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar"
 import { Badge } from "@repo/ui/badge"
 import { Separator } from "@repo/ui/separator"
 import {
@@ -14,29 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/table"
-import {
-  ArrowLeft,
-  Building2,
-  Calendar,
-  Hash,
-  Activity,
-  Users,
-} from "lucide-react"
-import { OrgTypeBadge } from "../_components/OrgTypeBadge"
-import { OrgStatusSelect } from "../_components/OrgStatusSelect"
-import { AddMemberDialog } from "../_components/AddMemberDialog"
-import { MemberActions } from "../_components/MemberActions"
-import { RoleBadge } from "../../users/_components/RoleBadge"
-
-function getInitials(name: string | null) {
-  if (!name) return "?"
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
+import { ArrowLeft, Building2, Users, Calendar } from "lucide-react"
+import { ResourceGrantsManager } from "../../grants/ResourceGrantsManager"
+import { getGrantsForSubject } from "../../grants/actions"
 
 function formatDate(date: Date) {
   return date.toLocaleDateString("en-US", {
@@ -62,25 +41,42 @@ export default async function OrgDetailPage({
       memberships: {
         with: { user: true },
       },
-      invitations: {
-        with: { invitedByUser: true },
-      },
     },
   })
 
   if (!org) notFound()
 
-  // Get users not already in this org for the Add Member dialog
-  const allUsers = await db.query.users.findMany({
-    orderBy: (u, { asc }) => [asc(u.name)],
-  })
-  const memberUserIds = new Set(org.memberships.map((m) => m.userId))
-  const availableUsers = allUsers.filter((u) => !memberUserIds.has(u.id))
+  const [orgGrants, dbSeasons, dbCollections, dbFactories] = await Promise.all([
+    getGrantsForSubject("org", id),
+    db.query.seasons.findMany({ orderBy: (s, { asc }) => [asc(s.code)] }),
+    db.query.collections.findMany({ orderBy: (c, { asc }) => [asc(c.sortOrder)] }),
+    db.query.factories.findMany({ orderBy: (f, { asc }) => [asc(f.legalName)] }),
+  ])
 
-  // Separate pending invitations
-  const pendingInvitations = org.invitations.filter(
-    (i) => i.status === "pending",
-  )
+  const resourceTypes = [
+    {
+      type: "season",
+      label: "Seasons",
+      options: dbSeasons.map((s) => ({ id: s.id, label: `${s.name} (${s.code})` })),
+    },
+    {
+      type: "collection",
+      label: "Collections",
+      options: dbCollections.map((c) => ({ id: c.id, label: c.name })),
+    },
+    {
+      type: "factory",
+      label: "Factories",
+      options: dbFactories.map((f) => ({ id: f.id, label: f.tradingName ?? f.legalName })),
+    },
+  ]
+
+  const grantsList = orgGrants.map((g) => ({
+    id: g.id,
+    resourceType: g.resourceType,
+    resourceId: g.resourceId,
+    permission: g.permission,
+  }))
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
@@ -93,7 +89,6 @@ export default async function OrgDetailPage({
       />
 
       <div className="space-y-8 max-w-3xl">
-        {/* Back link */}
         <Link
           href="/admin/orgs"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -104,211 +99,85 @@ export default async function OrgDetailPage({
 
         {/* Header */}
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border bg-muted">
-            <Building2 className="h-7 w-7 text-muted-foreground" />
+          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+            <Building2 className="h-6 w-6 text-muted-foreground" />
           </div>
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight truncate">
-                {org.name}
-              </h1>
-              <OrgTypeBadge type={org.type} />
-            </div>
-            <p className="text-muted-foreground">
-              <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">{org.name}</h1>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="capitalize">
+                {org.type}
+              </Badge>
+              <Badge
+                variant={org.status === "active" ? "default" : "secondary"}
+                className="capitalize"
+              >
+                {org.status}
+              </Badge>
+              <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 {org.slug}
               </code>
-            </p>
+            </div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Details grid */}
+        {/* Details */}
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Status */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Activity className="h-4 w-4" />
-              Status
+              <Users className="h-4 w-4" />
+              Members
             </div>
-            <OrgStatusSelect orgId={org.id} currentStatus={org.status} />
+            <p className="text-sm">{org.memberships.length} member(s)</p>
           </div>
-
-          {/* Type */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              Type
-            </div>
-            <p className="text-sm capitalize">{org.type}</p>
-          </div>
-
-          {/* Slug */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Hash className="h-4 w-4" />
-              Slug
-            </div>
-            <code className="text-sm bg-muted px-2 py-1 rounded block w-fit">
-              {org.slug}
-            </code>
-          </div>
-
-          {/* Dates */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              Dates
+              Created
             </div>
-            <div className="text-sm space-y-1">
-              <p>
-                <span className="text-muted-foreground">Created:</span>{" "}
-                {formatDate(org.createdAt)}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Updated:</span>{" "}
-                {formatDate(org.updatedAt)}
-              </p>
-            </div>
+            <p className="text-sm">{formatDate(org.createdAt)}</p>
           </div>
         </div>
 
-        <Separator />
-
-        {/* Members */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Members
-              <span className="text-sm font-normal text-muted-foreground">
-                ({org.memberships.length})
-              </span>
-            </h2>
-            <AddMemberDialog orgId={org.id} availableUsers={availableUsers} />
-          </div>
-
-          {org.memberships.length > 0 ? (
-            <div className="rounded-lg border bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[280px]">User</TableHead>
-                    <TableHead>Portal Role</TableHead>
-                    <TableHead>Org Role</TableHead>
-                    <TableHead>Since</TableHead>
-                    <TableHead className="w-[200px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {org.memberships.map((membership) => (
-                    <TableRow key={membership.id}>
-                      <TableCell>
-                        <Link
-                          href={`/admin/users/${membership.user.id}`}
-                          className="flex items-center gap-3 group"
-                        >
-                          <Avatar className="h-7 w-7">
-                            {membership.user.image && (
-                              <AvatarImage
-                                src={membership.user.image}
-                                alt={membership.user.name ?? ""}
-                              />
-                            )}
-                            <AvatarFallback className="text-xs">
-                              {getInitials(membership.user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate group-hover:underline">
-                              {membership.user.name ?? "Unnamed"}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {membership.user.email}
-                            </p>
-                          </div>
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <RoleBadge role={membership.user.role} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {membership.role.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(membership.createdAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <MemberActions
-                          membershipId={membership.id}
-                          orgId={org.id}
-                          currentRole={membership.role}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-              No members yet. Add a user to get started.
-            </div>
-          )}
-        </section>
-
-        {/* Pending invitations for this org */}
-        {pendingInvitations.length > 0 && (
+        {/* Members table */}
+        {org.memberships.length > 0 && (
           <>
             <Separator />
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">
-                Pending Invitations
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({pendingInvitations.length})
-                </span>
-              </h2>
+              <h2 className="text-lg font-semibold">Members</h2>
               <div className="rounded-lg border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Portal Role</TableHead>
                       <TableHead>Org Role</TableHead>
-                      <TableHead>Invited By</TableHead>
-                      <TableHead>Expires</TableHead>
+                      <TableHead>Since</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pendingInvitations.map((invite) => (
-                      <TableRow key={invite.id}>
-                        <TableCell className="font-medium">
-                          {invite.email}
+                    {org.memberships.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell>
+                          <Link
+                            href={`/admin/users/${m.user.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {m.user.name ?? "Unnamed"}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {m.user.email}
                         </TableCell>
                         <TableCell>
-                          <RoleBadge role={invite.role} />
-                        </TableCell>
-                        <TableCell>
-                          {invite.orgRole ? (
-                            <Badge variant="outline" className="capitalize">
-                              {invite.orgRole.replace("_", " ")}
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              —
-                            </span>
-                          )}
+                          <Badge variant="outline" className="capitalize">
+                            {m.role.replace("_", " ")}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {invite.invitedByUser?.name ?? "Unknown"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(invite.expiresAt)}
+                          {formatDate(m.createdAt)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -318,6 +187,22 @@ export default async function OrgDetailPage({
             </section>
           </>
         )}
+
+        {/* Access grants */}
+        <Separator />
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Access Grants</h2>
+          <p className="text-sm text-muted-foreground">
+            Grant this organization access to specific seasons, collections,
+            or factories. All members of the org inherit these grants.
+          </p>
+          <ResourceGrantsManager
+            subjectType="org"
+            subjectId={org.id}
+            grants={grantsList}
+            resourceTypes={resourceTypes}
+          />
+        </section>
       </div>
     </main>
   )

@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Users,
   Building2,
+  Shield,
 } from "lucide-react"
 
 // ─── Section type ────────────────────────────────────────────────────
@@ -27,6 +28,12 @@ export const adminSections: AdminSection[] = [
     href: "/admin/users",
     icon: Users,
     description: "Manage portal users and roles",
+  },
+  {
+    title: "Roles",
+    href: "/admin/roles",
+    icon: Shield,
+    description: "Manage roles and permissions",
   },
   {
     title: "Organizations",

@@ -26,17 +26,7 @@ import {
 } from '@repo/db/schema';
 import { eq, and, count, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import {
-  canSubmitForReview,
-  canPromoteToConcept,
-  canManageSeasons,
-  canFillSeasonSlot,
-  canApproveTransition,
-  canKill,
-  canManageCorePrograms,
-  canOverride,
-  type ProductRole,
-} from '@/lib/permissions';
+import { hasPermission, hasResourceAccess, type SessionUser } from '@/lib/permissions';
 import {
   validateReadyForReview,
   validateConceptTransition,
@@ -47,10 +37,15 @@ import {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
-async function getSessionUser() {
+async function getSessionUser(): Promise<SessionUser> {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Not authenticated');
-  return session.user;
+  return {
+    id: session.user.id,
+    role: session.user.role,
+    permissions: session.user.permissions ?? [],
+    orgId: session.user.orgId,
+  };
 }
 
 type ActionResult = { success: true; data?: unknown } | { success: false; error: string };
@@ -59,7 +54,7 @@ type ActionResult = { success: true; data?: unknown } | { success: false; error:
 
 export async function submitForReview(entryId: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canSubmitForReview(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'studio.review')) {
     return { success: false, error: 'Insufficient permissions to submit for review.' };
   }
 
@@ -107,8 +102,8 @@ export async function requestRevisions(
   notes: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canPromoteToConcept(user.productRole as ProductRole, user.role)) {
-    return { success: false, error: 'Only Product Lead or Founder can request revisions.' };
+  if (!hasPermission(user, 'studio.promote')) {
+    return { success: false, error: 'Insufficient permissions to request revisions.' };
   }
 
   const entry = await db.query.studioEntries.findFirst({
@@ -134,8 +129,8 @@ export async function promoteToConcept(
   seasonSlotId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canPromoteToConcept(user.productRole as ProductRole, user.role)) {
-    return { success: false, error: 'Only Product Lead or Founder can promote to concept.' };
+  if (!hasPermission(user, 'studio.promote')) {
+    return { success: false, error: 'Insufficient permissions to promote to concept.' };
   }
 
   const entry = await db.query.studioEntries.findFirst({
@@ -243,7 +238,7 @@ export async function createSeason(data: {
     constructionTargets?: Record<string, number>;
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -293,8 +288,11 @@ export async function updateSeason(
   }>,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
+  }
+  if (!(await hasResourceAccess(user, 'season', id, 'write'))) {
+    return { success: false, error: 'No access to this season.' };
   }
 
   await db.update(seasons).set(data).where(eq(seasons.id, id));
@@ -305,8 +303,11 @@ export async function updateSeason(
 
 export async function lockSeason(id: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
+  }
+  if (!(await hasResourceAccess(user, 'season', id, 'write'))) {
+    return { success: false, error: 'No access to this season.' };
   }
 
   await db.update(seasons).set({ status: 'locked' }).where(eq(seasons.id, id));
@@ -330,7 +331,7 @@ export async function createSeasonSlot(
   },
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canFillSeasonSlot(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'slots.create')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -412,7 +413,7 @@ export async function createSeasonSlot(
 
 export async function removeSeasonSlot(slotId: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -439,7 +440,7 @@ export async function addCoreRef(
   selectedColorways: string[],
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -460,7 +461,7 @@ export async function advanceConcept(
   notes?: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canApproveTransition(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'concepts.advance')) {
     return { success: false, error: 'Insufficient permissions to advance concept.' };
   }
 
@@ -515,8 +516,8 @@ export async function killConcept(
   reason: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canKill(user.productRole as ProductRole, user.role)) {
-    return { success: false, error: 'Only Founder can kill a concept.' };
+  if (!hasPermission(user, 'concepts.kill')) {
+    return { success: false, error: 'Insufficient permissions to kill a concept.' };
   }
 
   const concept = await db.query.skuConcepts.findFirst({
@@ -558,7 +559,7 @@ export async function linkSourcingRecord(
   recordId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canApproveTransition(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'concepts.advance')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -599,7 +600,7 @@ export async function createCoreProgram(data: {
   baseColorways?: string[];
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageCorePrograms(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'core_programs.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -629,13 +630,13 @@ export async function updateCoreProgram(
   isOverride?: boolean,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageCorePrograms(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'core_programs.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
   // Fabric/block changes require founder override
   if ((data.fabricSpec !== undefined || data.blockId !== undefined) && !isOverride) {
-    if (!canOverride(user.productRole as ProductRole, user.role)) {
+    if (!hasPermission(user, 'concepts.override')) {
       return {
         success: false,
         error: 'Fabric spec and block changes require Founder override.',
@@ -656,8 +657,11 @@ export async function updateSeasonColors(
   colorEntryIds: string[],
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
+  }
+  if (!(await hasResourceAccess(user, 'season', seasonId, 'write'))) {
+    return { success: false, error: 'No access to this season.' };
   }
 
   const season = await db.query.seasons.findFirst({
@@ -706,8 +710,11 @@ export async function confirmSeasonColor(
   studioEntryId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
+  if (!hasPermission(user, 'seasons.manage')) {
     return { success: false, error: 'Insufficient permissions.' };
+  }
+  if (!(await hasResourceAccess(user, 'season', seasonId, 'write'))) {
+    return { success: false, error: 'No access to this season.' };
   }
 
   await db

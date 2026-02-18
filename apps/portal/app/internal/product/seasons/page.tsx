@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { db } from "@repo/db/client"
+import { auth } from "@repo/auth"
 import { DocPageShell } from "@/components/nav/DocPageShell"
 import { CreateSeasonDialog } from "../CreateSeasonDialog"
+import { getAccessibleResourceIds } from "@/lib/permissions"
 
 // ─── Metadata ────────────────────────────────────────────────────────
 
@@ -22,6 +24,16 @@ const seasonStatusColors: Record<string, string> = {
 // ─── Page ────────────────────────────────────────────────────────────
 
 export default async function SeasonsPage() {
+  const session = await auth()
+  const user = session?.user
+    ? {
+        id: session.user.id,
+        role: session.user.role,
+        permissions: session.user.permissions ?? [],
+        orgId: session.user.orgId,
+      }
+    : null
+
   const allSeasons = await db.query.seasons.findMany({
     with: {
       slots: {
@@ -36,6 +48,12 @@ export default async function SeasonsPage() {
     },
     orderBy: (s, { asc }) => [asc(s.code)],
   })
+
+  // Filter by resource grants for non-admin users
+  const accessibleIds = user ? await getAccessibleResourceIds(user, 'season') : []
+  const filteredSeasons = accessibleIds === null
+    ? allSeasons
+    : allSeasons.filter((s) => accessibleIds.includes(s.id))
 
   return (
     <DocPageShell breadcrumbs={[{ label: "Product", href: "/internal/product" }, { label: "Seasons" }]}>
@@ -52,7 +70,7 @@ export default async function SeasonsPage() {
 
         {/* ─── Season Cards ────────────────────────────────────── */}
         <section className="px-12 py-8">
-          {allSeasons.length === 0 ? (
+          {filteredSeasons.length === 0 ? (
             <div className="pillar-block text-center py-12">
               <p className="text-xs text-[var(--depot-muted)]">
                 No seasons created yet. Seed the database to get started.
@@ -60,7 +78,7 @@ export default async function SeasonsPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              {allSeasons.map((season) => {
+              {filteredSeasons.map((season) => {
                 const activeSlots = season.slots.filter(s => s.status !== 'removed')
                 const filledCount = activeSlots.filter(s => s.status === 'filled').length
                 const openCount = activeSlots.filter(s => s.status === 'open').length

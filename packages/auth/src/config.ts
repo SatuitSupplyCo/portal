@@ -18,6 +18,8 @@ import {
   verificationTokens,
   invitations,
   orgMemberships,
+  userRoles,
+  rolePermissions,
 } from "@repo/db/schema"
 import { eq } from "@repo/db"
 import type { DefaultSession } from "next-auth"
@@ -31,6 +33,7 @@ declare module "next-auth" {
       id: string
       role: string
       productRole: string | null
+      permissions: string[]
       orgId: string | null
     } & DefaultSession["user"]
   }
@@ -40,6 +43,18 @@ declare module "next-auth" {
     productRole?: string | null
     orgId?: string | null
   }
+}
+
+// ─── RBAC helpers ────────────────────────────────────────────────────
+
+async function resolveUserPermissions(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ permissionCode: rolePermissions.permissionCode })
+    .from(userRoles)
+    .innerJoin(rolePermissions, eq(userRoles.roleId, rolePermissions.roleId))
+    .where(eq(userRoles.userId, userId))
+
+  return [...new Set(rows.map((r) => r.permissionCode))]
 }
 
 // Note: JWT type augmentation omitted — pnpm's strict resolution
@@ -185,6 +200,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.role = pendingInvite.role
             token.productRole = pendingInvite.productRole ?? null
             token.orgId = pendingInvite.orgId ?? user.orgId ?? null
+            token.permissions = await resolveUserPermissions(user.id!)
             return token
           }
         }
@@ -193,6 +209,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = user.role ?? "internal_viewer"
         token.productRole = user.productRole ?? null
         token.orgId = user.orgId ?? null
+        token.permissions = await resolveUserPermissions(user.id!)
       }
 
       // On token refresh, re-read from DB so role changes take effect
@@ -205,6 +222,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = freshUser.role
           token.productRole = freshUser.productRole ?? null
           token.orgId = freshUser.orgId ?? null
+          token.permissions = await resolveUserPermissions(freshUser.id)
         }
       }
 
@@ -212,10 +230,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async session({ session, token }) {
-      // Surface portal fields in the client-visible session
       session.user.id = token.sub!
       session.user.role = (token.role as string) ?? "internal_viewer"
       session.user.productRole = (token.productRole as string | null) ?? null
+      session.user.permissions = (token.permissions as string[]) ?? []
       session.user.orgId = (token.orgId as string | null) ?? null
       return session
     },

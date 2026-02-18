@@ -6,7 +6,6 @@ import { SetBreadcrumbs } from "@/components/nav/SetBreadcrumbs"
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar"
 import { Badge } from "@repo/ui/badge"
 import { Separator } from "@repo/ui/separator"
-import { Button } from "@repo/ui/button"
 import {
   Table,
   TableBody,
@@ -17,8 +16,10 @@ import {
 } from "@repo/ui/table"
 import { ArrowLeft, Mail, Building2, Calendar, Shield, Boxes } from "lucide-react"
 import { UserRoleSelect } from "../_components/UserRoleSelect"
-import { ProductRoleSelect } from "../_components/ProductRoleSelect"
+import { UserRolesManager } from "../_components/UserRolesManager"
 import { RoleBadge } from "../_components/RoleBadge"
+import { ResourceGrantsManager } from "../../grants/ResourceGrantsManager"
+import { getGrantsForSubject } from "../../grants/actions"
 
 function getInitials(name: string | null) {
   if (!name) return "?"
@@ -64,17 +65,65 @@ export default async function UserDetailPage({
       orgMemberships: {
         with: { organization: true },
       },
+      userRoles: {
+        with: { role: true },
+      },
     },
   })
 
   if (!user) notFound()
 
-  // Get invitation history for this user's email
-  const invitationHistory = await db.query.invitations.findMany({
-    where: (i, { eq }) => eq(i.email, user.email),
-    with: { invitedByUser: true },
-    orderBy: (i, { desc }) => [desc(i.createdAt)],
-  })
+  const [invitationHistory, allRoles, userGrants, dbSeasons, dbCollections, dbFactories] = await Promise.all([
+    db.query.invitations.findMany({
+      where: (i, { eq }) => eq(i.email, user.email),
+      with: { invitedByUser: true },
+      orderBy: (i, { desc }) => [desc(i.createdAt)],
+    }),
+    db.query.roles.findMany({
+      orderBy: (r, { asc }) => [asc(r.name)],
+    }),
+    getGrantsForSubject("user", id),
+    db.query.seasons.findMany({ orderBy: (s, { asc }) => [asc(s.code)] }),
+    db.query.collections.findMany({ orderBy: (c, { asc }) => [asc(c.sortOrder)] }),
+    db.query.factories.findMany({ orderBy: (f, { asc }) => [asc(f.legalName)] }),
+  ])
+
+  const assignedRoles = user.userRoles.map((ur) => ({
+    roleId: ur.role.id,
+    roleName: ur.role.name,
+    isSystem: ur.role.isSystem,
+  }))
+
+  const roleOptions = allRoles.map((r) => ({
+    id: r.id,
+    name: r.name,
+    isSystem: r.isSystem,
+  }))
+
+  const resourceTypes = [
+    {
+      type: "season",
+      label: "Seasons",
+      options: dbSeasons.map((s) => ({ id: s.id, label: `${s.name} (${s.code})` })),
+    },
+    {
+      type: "collection",
+      label: "Collections",
+      options: dbCollections.map((c) => ({ id: c.id, label: c.name })),
+    },
+    {
+      type: "factory",
+      label: "Factories",
+      options: dbFactories.map((f) => ({ id: f.id, label: f.tradingName ?? f.legalName })),
+    },
+  ]
+
+  const grantsList = userGrants.map((g) => ({
+    id: g.id,
+    resourceType: g.resourceType,
+    resourceId: g.resourceId,
+    permission: g.permission,
+  }))
 
   const surfaces = SURFACE_ACCESS[user.role] ?? []
   const isSelf = session.user.id === user.id
@@ -138,15 +187,16 @@ export default async function UserDetailPage({
             />
           </div>
 
-          {/* Product Role */}
+          {/* RBAC Roles */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Boxes className="h-4 w-4" />
-              Product Role
+              Roles
             </div>
-            <ProductRoleSelect
+            <UserRolesManager
               userId={user.id}
-              currentRole={user.productRole}
+              assignedRoles={assignedRoles}
+              allRoles={roleOptions}
               isSelf={isSelf}
             />
             <p className="text-xs text-muted-foreground">
@@ -310,6 +360,22 @@ export default async function UserDetailPage({
             </section>
           </>
         )}
+
+        {/* Access grants */}
+        <Separator />
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Access Grants</h2>
+          <p className="text-sm text-muted-foreground">
+            Grant this user access to specific seasons, collections, or factories.
+            Admins and owners have access to everything by default.
+          </p>
+          <ResourceGrantsManager
+            subjectType="user"
+            subjectId={user.id}
+            grants={grantsList}
+            resourceTypes={resourceTypes}
+          />
+        </section>
       </div>
     </main>
   )

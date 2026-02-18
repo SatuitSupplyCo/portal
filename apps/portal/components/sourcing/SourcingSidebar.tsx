@@ -3,51 +3,79 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@repo/ui/utils"
+import { useIsMobile } from "@repo/ui/use-mobile"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@repo/ui/sheet"
 import { sourcingSections } from "./sourcing-config"
+import { useShell } from "@/components/shell/ShellProvider"
 
 // ─── Component ──────────────────────────────────────────────────────
 
 export function SourcingSidebar() {
   const pathname = usePathname()
+  const isMobile = useIsMobile()
+  const { sectionNavOpen, setSectionNavOpen } = useShell()
 
   const isSectionActive = (href: string) => {
     if (href === "/internal/sourcing") return pathname === href
     return pathname === href || pathname.startsWith(href + "/")
   }
 
+  const closeMobile = () => { if (isMobile) setSectionNavOpen(false) }
+
+  const content = (
+    <nav className="px-3 py-6">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-5 px-2">
+        Sourcing
+      </p>
+
+      <ul className="flex flex-col gap-0.5">
+        {sourcingSections.map((section) => {
+          const isActive = isSectionActive(section.href)
+          const Icon = section.icon
+
+          return (
+            <li key={section.href}>
+              <Link
+                href={section.href}
+                onClick={closeMobile}
+                className={cn(
+                  "flex items-center gap-2.5 px-2 py-2 rounded-md text-[13px] leading-snug transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{section.title}</span>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
+  )
+
+  if (isMobile) {
+    return (
+      <Sheet open={sectionNavOpen} onOpenChange={setSectionNavOpen}>
+        <SheetContent side="left" className="w-72 p-0 overflow-y-auto">
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle className="text-sm">Sourcing CRM</SheetTitle>
+          </SheetHeader>
+          {content}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
   return (
     <aside className="hidden md:flex w-52 shrink-0 flex-col border-r overflow-y-auto bg-background">
-      <nav className="px-3 py-6">
-        {/* Title */}
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-5 px-2">
-          Sourcing
-        </p>
-
-        {/* Section list */}
-        <ul className="flex flex-col gap-0.5">
-          {sourcingSections.map((section) => {
-            const isActive = isSectionActive(section.href)
-            const Icon = section.icon
-
-            return (
-              <li key={section.href}>
-                <Link
-                  href={section.href}
-                  className={cn(
-                    "flex items-center gap-2.5 px-2 py-2 rounded-md text-[13px] leading-snug transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{section.title}</span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      {content}
     </aside>
   )
 }
