@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@repo/ui/dialog'
-import { Settings2, AlertTriangle } from 'lucide-react'
+import { Settings2, AlertTriangle, Sparkles } from 'lucide-react'
 import { cn } from '@repo/ui/utils'
 import { updateSeason } from '../../actions'
 
@@ -59,6 +59,8 @@ interface EditTargetsDialogProps {
   initialTab?: EditTargetsTab
   /** When set, only show Overall + this one dimension (per-dimension CTA mode) */
   focusedDimension?: EditTargetsTab
+  /** AI-suggested targets to pre-fill when the dialog opens */
+  suggestedTargets?: { dimensionKey: EditTargetsTab; values: Record<string, number> } | null
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
@@ -93,6 +95,7 @@ export function EditTargetsDialog({
   dimensionOptions,
   initialTab,
   focusedDimension,
+  suggestedTargets,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: EditTargetsDialogProps) {
@@ -204,6 +207,8 @@ export function EditTargetsDialog({
     doSave()
   }
 
+  const [aiSuggestedKeys, setAiSuggestedKeys] = useState<Set<string>>(new Set())
+
   function resetToCurrentValues() {
     setCategoryTargets(currentCategoryTargets)
     setConstructionTargets(currentConstructionTargets)
@@ -216,7 +221,41 @@ export function EditTargetsDialog({
     setActiveTab(initialTab ?? 'category')
     setShowOverageConfirm(false)
     setError(null)
+    setAiSuggestedKeys(new Set())
   }
+
+  function resetToSaved() {
+    resetToCurrentValues()
+  }
+
+  function applySuggestedTargets() {
+    if (!suggestedTargets) return
+    const { dimensionKey, values } = suggestedTargets
+    const setter = dimensionSetterMap[dimensionKey]
+    if (setter) {
+      setter(values)
+      setAiSuggestedKeys(new Set(Object.keys(values)))
+    }
+  }
+
+  const dimensionSetterMap: Record<string, React.Dispatch<React.SetStateAction<Record<string, number>>>> = {
+    category: setCategoryTargets,
+    construction: setConstructionTargets,
+    weightClass: setWeightClassTargets,
+    sellingWindow: setSellingWindowTargets,
+    tenure: setTenureTargets,
+    useCase: setUseCaseTargets,
+    gender: setGenderTargets,
+    ageGroup: setAgeGroupTargets,
+  }
+
+  // Apply AI suggestions when dialog opens with suggested targets
+  useEffect(() => {
+    if (open && suggestedTargets) {
+      applySuggestedTargets()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, suggestedTargets])
 
   // ─── Map tabs to state ──────────────────────────────────────────
 
@@ -304,6 +343,8 @@ export function EditTargetsDialog({
               targetSlotCount={targetSlotCount}
               isOver={!!overages[activeTab]}
               onChange={(key, val) => updateTarget(dimensionState[activeTab].setter, key, val)}
+              aiSuggestedKeys={suggestedTargets?.dimensionKey === activeTab ? aiSuggestedKeys : undefined}
+              onResetToSaved={suggestedTargets?.dimensionKey === activeTab ? resetToSaved : undefined}
             />
           )}
         </div>
@@ -349,13 +390,16 @@ export function EditTargetsDialog({
 // ─── Dimension Editor ────────────────────────────────────────────────
 
 function DimensionEditor({
-  tab, options, values, total, targetSlotCount, isOver, onChange,
+  tab, options, values, total, targetSlotCount, isOver, onChange, aiSuggestedKeys, onResetToSaved,
 }: {
   tab: EditTargetsTab; options: DimensionOption[]; values: Record<string, number>
   total: number; targetSlotCount: number; isOver: boolean
   onChange: (key: string, val: string) => void
+  aiSuggestedKeys?: Set<string>
+  onResetToSaved?: () => void
 }) {
   const label = DIMENSIONS.find((d) => d.id === tab)?.label ?? tab
+  const hasAiSuggestions = aiSuggestedKeys && aiSuggestedKeys.size > 0
 
   const groups = useMemo(() => {
     const grouped = new Map<string, DimensionOption[]>()
@@ -371,7 +415,24 @@ function DimensionEditor({
 
   return (
     <div className="space-y-4">
-      <TotalIndicator total={total} targetSlotCount={targetSlotCount} label={label} isOver={isOver} />
+      <div className="flex items-center justify-between">
+        <TotalIndicator total={total} targetSlotCount={targetSlotCount} label={label} isOver={isOver} />
+        {hasAiSuggestions && onResetToSaved && (
+          <button
+            type="button"
+            onClick={onResetToSaved}
+            className="text-[9px] text-blue-500 hover:text-blue-700 uppercase tracking-wider font-medium transition-colors"
+          >
+            Reset to Saved
+          </button>
+        )}
+      </div>
+      {hasAiSuggestions && (
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-blue-50 border border-blue-100">
+          <Sparkles className="h-3 w-3 text-blue-400" />
+          <span className="text-[10px] text-blue-600">AI-suggested values are highlighted</span>
+        </div>
+      )}
       {hasGroups ? (
         Array.from(groups.entries()).map(([groupName, groupOptions]) => (
           <div key={groupName || '_ungrouped'}>
@@ -380,7 +441,7 @@ function DimensionEditor({
             )}
             <div className="space-y-2">
               {groupOptions.map((opt) => (
-                <TargetRow key={opt.key} label={opt.label} value={values[opt.key] ?? 0} onChange={(v) => onChange(opt.key, v)} />
+                <TargetRow key={opt.key} label={opt.label} value={values[opt.key] ?? 0} onChange={(v) => onChange(opt.key, v)} isAiSuggested={aiSuggestedKeys?.has(opt.key)} />
               ))}
             </div>
           </div>
@@ -388,7 +449,7 @@ function DimensionEditor({
       ) : (
         <div className="space-y-2">
           {options.map((opt) => (
-            <TargetRow key={opt.key} label={opt.label} value={values[opt.key] ?? 0} onChange={(v) => onChange(opt.key, v)} />
+            <TargetRow key={opt.key} label={opt.label} value={values[opt.key] ?? 0} onChange={(v) => onChange(opt.key, v)} isAiSuggested={aiSuggestedKeys?.has(opt.key)} />
           ))}
         </div>
       )}
@@ -413,12 +474,23 @@ function TotalIndicator({ total, targetSlotCount, label, isOver }: { total: numb
   )
 }
 
-function TargetRow({ label, value, onChange }: { label: string; value: number; onChange: (val: string) => void }) {
+function TargetRow({ label, value, onChange, isAiSuggested }: { label: string; value: number; onChange: (val: string) => void; isAiSuggested?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[11px] text-[var(--depot-ink-light)] w-28 truncate" title={label}>{label}</span>
+      <div className="flex items-center gap-1.5 w-28 min-w-0">
+        {isAiSuggested && <Sparkles className="h-3 w-3 text-blue-400 shrink-0" />}
+        <span className="text-[11px] text-[var(--depot-ink-light)] truncate" title={label}>{label}</span>
+      </div>
       <div className="flex items-center gap-1 ml-auto">
-        <Input type="number" min={0} max={999} value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-16 h-7 text-[11px] text-right tabular-nums" placeholder="0" />
+        <Input
+          type="number"
+          min={0}
+          max={999}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn('w-16 h-7 text-[11px] text-right tabular-nums', isAiSuggested && 'ring-1 ring-blue-200')}
+          placeholder="0"
+        />
         <span className="text-[10px] text-[var(--depot-faint)] w-8">slots</span>
       </div>
     </div>

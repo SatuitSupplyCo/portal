@@ -14,13 +14,13 @@ const ASSORTMENT_SYSTEM = `You are a product assortment strategist for Satuit, a
 You help merchandisers plan seasonal assortments across dimensions like Category (Tops, Outerwear, Bottoms, Swim & Performance), Construction, Weight Class, Selling Window, Tenure, Use Case, Gender, and Age Group.
 
 Guidelines:
-- Be concise and data-driven. Use bullet points or short tables.
+- Be concise and data-driven.
 - Refer to dimension values by their display labels, not codes.
 - When suggesting allocations, ensure they sum to the target slot count.
 - When critiquing, be specific about which values are over/under-allocated and why.
 - Keep responses under 300 words.`
 
-// ─── Assortment Mix ─────────────────────────────────────────────────
+// ─── Formatting Helpers ─────────────────────────────────────────────
 
 function formatTargets(
   targets: Record<string, number>,
@@ -40,9 +40,76 @@ function formatActuals(
   return entries.map(([k, v]) => `  ${labels[k] ?? k}: ${v}`).join('\n')
 }
 
-function formatLabels(labels: Record<string, string>): string {
-  return Object.values(labels).join(', ')
+function formatKeyLabelMap(labels: Record<string, string>): string {
+  return Object.entries(labels)
+    .map(([key, label]) => `  "${key}" = "${label}"`)
+    .join('\n')
 }
+
+function formatSeasonBlock(season: AssortmentMixContext['season']): string {
+  const lines = [
+    `Season: ${season.name} (${season.code}, ${season.type})`,
+    season.description ? `Direction: ${season.description}` : null,
+    season.launchDate ? `Launch: ${season.launchDate}` : null,
+    `Target slot count: ${season.targetSlotCount}`,
+    season.marginTarget != null ? `Margin target: ${season.marginTarget}%` : null,
+    season.targetEvergreenPct != null ? `Evergreen target: ${season.targetEvergreenPct}%` : null,
+  ]
+  return lines.filter(Boolean).join('\n')
+}
+
+function formatSummaryBlock(summary: AssortmentMixContext['summary']): string {
+  return `Slots: ${summary.totalSlots} total, ${summary.filledSlots} filled, ${summary.openSlots} open`
+}
+
+function formatBrandBrief(brief: string | null | undefined): string {
+  if (!brief) return ''
+  return `\nBrand context:\n${brief}\n`
+}
+
+function formatCollectionBriefs(
+  briefs: AssortmentMixContext['collectionBriefs'],
+): string {
+  if (!briefs || briefs.length === 0) return ''
+  const lines = briefs.map(
+    (c) => `  ${c.name} (${c.slotCount} slots): ${c.brief}`,
+  )
+  return `\nCollections in this season:\n${lines.join('\n')}\n`
+}
+
+function formatOtherDimTargets(
+  allTargets: Record<string, Record<string, number>> | undefined,
+  currentDimKey: string,
+): string {
+  if (!allTargets) return ''
+  const others = Object.entries(allTargets).filter(
+    ([key]) => key !== currentDimKey,
+  )
+  if (others.length === 0) return ''
+  const lines = others.map(([key, targets]) => {
+    const vals = Object.entries(targets)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ')
+    return vals ? `  ${key}: ${vals}` : null
+  }).filter(Boolean)
+  if (lines.length === 0) return ''
+  return `\nOther dimension targets already set:\n${lines.join('\n')}\n`
+}
+
+function formatFeedback(
+  feedback: AssortmentMixContext['feedback'],
+): string {
+  if (!feedback || feedback.length === 0) return ''
+  const lines = feedback.map((f) => {
+    const status = f.status === 'accepted' ? 'accepted' : 'rejected'
+    const reason = f.rationale ? ` — "${f.rationale}"` : ''
+    return `  ${f.label}: ${f.suggestedValue} slots (${status}${reason})`
+  })
+  return `\nPrevious suggestion feedback from the user:\n${lines.join('\n')}\nIncorporate this feedback: keep accepted allocations close to their values, reallocate away from rejected items, and respect any stated reasons.\n`
+}
+
+// ─── Assortment Mix Prompts ─────────────────────────────────────────
 
 export function buildAssortmentPrompt(
   mode: 'suggest' | 'critique',
@@ -50,38 +117,36 @@ export function buildAssortmentPrompt(
 ): { system: string; prompt: string } {
   const { season, dimension, summary } = ctx
 
-  const seasonLine = [
-    `Season: ${season.name} (${season.code}, ${season.type})`,
-    season.description ? `Direction: ${season.description}` : null,
-    season.launchDate ? `Launch: ${season.launchDate}` : null,
-    `Target slot count: ${season.targetSlotCount}`,
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  const summaryLine = `Slots: ${summary.totalSlots} total, ${summary.filledSlots} filled, ${summary.openSlots} open`
+  const seasonBlock = formatSeasonBlock(season)
+  const summaryBlock = formatSummaryBlock(summary)
+  const brandBlock = formatBrandBrief(ctx.brandBrief)
+  const collectionBlock = formatCollectionBriefs(ctx.collectionBriefs)
+  const otherDimsBlock = formatOtherDimTargets(ctx.allDimensionTargets, dimension.key)
 
   if (mode === 'suggest') {
-    const prompt = `${seasonLine}
-${summaryLine}
+    const feedbackBlock = formatFeedback(ctx.feedback)
 
+    const prompt = `${seasonBlock}
+${summaryBlock}
+${brandBlock}${collectionBlock}${otherDimsBlock}
 Dimension: ${dimension.label}
-Available values: ${formatLabels(dimension.labels)}
+Available values (key = display label):
+${formatKeyLabelMap(dimension.labels)}
 
 Current targets:
 ${formatTargets(dimension.targets, dimension.labels)}
 
 Current actuals:
 ${formatActuals(dimension.actuals, dimension.labels)}
-
-Suggest a target allocation for the "${dimension.label}" dimension that sums to ${season.targetSlotCount} slots. Explain your rationale briefly.`
+${feedbackBlock}
+Suggest a target allocation for the "${dimension.label}" dimension that sums to ${season.targetSlotCount} slots. For each value, use the exact key from the "Available values" list above and provide a brief rationale.`
 
     return { system: ASSORTMENT_SYSTEM, prompt }
   }
 
-  const prompt = `${seasonLine}
-${summaryLine}
-
+  const prompt = `${seasonBlock}
+${summaryBlock}
+${brandBlock}${collectionBlock}${otherDimsBlock}
 Dimension: ${dimension.label}
 
 Current targets:

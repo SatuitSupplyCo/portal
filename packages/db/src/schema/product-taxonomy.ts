@@ -397,6 +397,19 @@ export const collections = pgTable(
     name: text('name').notNull(),
     description: text('description'),
 
+    // Strategy fields (editable, consumed by AI via contextBrief)
+    intent: text('intent'),
+    designMandate: text('design_mandate'),
+    brandingMandate: text('branding_mandate'),
+    systemRole: text('system_role'),
+
+    // AI-distilled summary of strategy fields
+    contextBrief: text('context_brief'),
+    contextBriefUpdatedAt: timestamp('context_brief_updated_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+
     sortOrder: integer('sort_order').notNull().default(0),
     status: taxonomyStatusEnum('status').notNull().default('active'),
 

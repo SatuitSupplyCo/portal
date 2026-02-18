@@ -1,7 +1,8 @@
-import { streamText } from 'ai'
+import { streamText, generateObject } from 'ai'
 import { auth } from '@repo/auth'
 import { insightModel } from '@/lib/ai/client'
 import { buildPrompt } from '@/lib/ai/prompts'
+import { suggestResponseSchema } from '@/lib/ai/types'
 
 export const maxDuration = 30
 
@@ -27,6 +28,23 @@ export async function POST(req: Request) {
   }
 
   try {
+    if (mode === 'suggest') {
+      const result = await generateObject({
+        model: insightModel,
+        schema: suggestResponseSchema,
+        system: prompt.system,
+        prompt: prompt.prompt,
+        temperature: 0.4,
+      })
+
+      if (!result.object) {
+        console.error('[ai/insights] Empty structured response from model')
+        return new Response('Empty response from AI model', { status: 502 })
+      }
+
+      return Response.json(result.object)
+    }
+
     const result = streamText({
       model: insightModel,
       system: prompt.system,

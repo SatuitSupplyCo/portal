@@ -11,6 +11,7 @@ export * from './sourcing';
 export * from './studio';
 export * from './product-taxonomy';
 export * from './lifecycle';
+export * from './brand';
 export * from './permissions';
 export * from './rbac';
 export * from './audit';

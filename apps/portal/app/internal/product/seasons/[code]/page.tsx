@@ -18,6 +18,7 @@ import {
   constructions as constructionsTable,
   fitBlocks as fitBlocksTable,
   sizeScales as sizeScalesTable,
+  brandContext as brandContextTable,
 } from "@repo/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { DocPageShell } from "@/components/nav/DocPageShell"
@@ -172,6 +173,7 @@ export default async function SeasonDetailPage({
     taxonomyFitBlocks,
     taxonomySizeScales,
     allSeasons,
+    brandContextRows,
   ] = await Promise.all([
     db.query.productCategories.findMany({
       with: {
@@ -193,6 +195,7 @@ export default async function SeasonDetailPage({
     db.select().from(fitBlocksTable).orderBy(asc(fitBlocksTable.sortOrder)),
     db.select().from(sizeScalesTable).orderBy(asc(sizeScalesTable.sortOrder)),
     db.query.seasons.findMany({ orderBy: (s, { desc }) => [desc(s.createdAt)] }),
+    db.query.brandContext.findMany({ limit: 1 }),
   ])
 
   const productHierarchy = taxonomyCategories.map((cat) => ({
@@ -583,7 +586,36 @@ export default async function SeasonDetailPage({
                     description: season.description ?? null,
                     launchDate: season.launchDate?.toISOString().split('T')[0] ?? null,
                     targetSlotCount: season.targetSkuCount,
+                    marginTarget: season.marginTarget ? Number(season.marginTarget) : null,
+                    targetEvergreenPct: season.targetEvergreenPct ?? null,
                   }}
+                  allDimensionTargets={{
+                    category: categoryTargets,
+                    construction: constructionTargets,
+                    weightClass: weightClassTargets,
+                    sellingWindow: sellingWindowTargets,
+                    tenure: tenureTargets,
+                    useCase: useCaseTargets,
+                    gender: genderTargets,
+                    ageGroup: ageGroupTargets,
+                  }}
+                  brandBrief={brandContextRows[0]?.contextBrief ?? null}
+                  collectionBriefs={
+                    (() => {
+                      const colCounts: Record<string, number> = {}
+                      for (const slot of activeSlots) {
+                        const code = slot.collection?.code
+                        if (code) colCounts[code] = (colCounts[code] ?? 0) + 1
+                      }
+                      return taxonomyCollections
+                        .filter((c) => colCounts[c.code] && c.contextBrief)
+                        .map((c) => ({
+                          name: c.name,
+                          brief: c.contextBrief!,
+                          slotCount: colCounts[c.code] ?? 0,
+                        }))
+                    })()
+                  }
                   slotSummary={{
                     totalSlots: activeSlots.length,
                     filledSlots: filledSlots.length,

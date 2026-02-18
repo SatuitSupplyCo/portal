@@ -48,6 +48,12 @@ interface AssortmentMixSectionProps {
   }
   /** Season metadata for AI insight panel */
   seasonContext?: AssortmentMixContext['season']
+  /** All dimension targets for cross-dimensional AI reasoning */
+  allDimensionTargets?: Record<string, Record<string, number>>
+  /** Brand brief for AI context */
+  brandBrief?: string | null
+  /** Collection briefs for AI context */
+  collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   /** Slot fill summary for AI insight panel */
   slotSummary?: AssortmentMixContext['summary']
 }
@@ -70,11 +76,18 @@ export function AssortmentMixSection({
   currentAgeGroupTargets,
   dimensionOptions,
   seasonContext,
+  allDimensionTargets,
+  brandBrief,
+  collectionBriefs,
   slotSummary,
 }: AssortmentMixSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogTab, setDialogTab] = useState<EditTargetsTab>('category')
   const [dialogFocus, setDialogFocus] = useState<EditTargetsTab | undefined>(undefined)
+  const [suggestedTargets, setSuggestedTargets] = useState<{
+    dimensionKey: EditTargetsTab
+    values: Record<string, number>
+  } | null>(null)
 
   const { filter, setFilter } = useDimensionFilter()
 
@@ -82,6 +95,7 @@ export function AssortmentMixSection({
   const openAll = useCallback(() => {
     setDialogTab('category')
     setDialogFocus(undefined)
+    setSuggestedTargets(null)
     setDialogOpen(true)
   }, [])
 
@@ -91,6 +105,7 @@ export function AssortmentMixSection({
       const tab = TAB_MAP[dimensionKey] ?? 'category'
       setDialogTab(tab)
       setDialogFocus(tab)
+      setSuggestedTargets(null)
       setDialogOpen(true)
     },
     [],
@@ -101,6 +116,25 @@ export function AssortmentMixSection({
       setFilter({ dimensionKey, valueCode })
     },
     [setFilter],
+  )
+
+  const handleApplySuggestions = useCallback(
+    (dimensionKey: string, targets: Record<string, number>) => {
+      const tab = TAB_MAP[dimensionKey] ?? 'category'
+      setSuggestedTargets({ dimensionKey: tab, values: targets })
+      setDialogTab(tab)
+      setDialogFocus(tab)
+      setDialogOpen(true)
+    },
+    [],
+  )
+
+  const handleDialogClose = useCallback(
+    (open: boolean) => {
+      setDialogOpen(open)
+      if (!open) setSuggestedTargets(null)
+    },
+    [],
   )
 
   return (
@@ -129,7 +163,11 @@ export function AssortmentMixSection({
         selectedFilter={filter}
         onFilterSelect={handleFilterSelect}
         seasonContext={seasonContext}
+        allDimensionTargets={allDimensionTargets}
+        brandBrief={brandBrief}
+        collectionBriefs={collectionBriefs}
         slotSummary={slotSummary}
+        onApplySuggestions={handleApplySuggestions}
       />
 
       {/* Single shared dialog instance */}
@@ -148,8 +186,9 @@ export function AssortmentMixSection({
         dimensionOptions={dimensionOptions}
         initialTab={dialogTab}
         focusedDimension={dialogFocus}
+        suggestedTargets={suggestedTargets}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogClose}
       />
     </>
   )

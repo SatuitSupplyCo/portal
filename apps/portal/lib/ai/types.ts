@@ -5,6 +5,8 @@
  * to different prompt builders as new AI touchpoints are added.
  */
 
+import { z } from 'zod'
+
 // ─── Assortment Mix ─────────────────────────────────────────────────
 
 export interface AssortmentMixContext {
@@ -15,6 +17,8 @@ export interface AssortmentMixContext {
     description: string | null
     launchDate: string | null
     targetSlotCount: number
+    marginTarget: number | null
+    targetEvergreenPct: number | null
   }
   dimension: {
     key: string
@@ -23,11 +27,25 @@ export interface AssortmentMixContext {
     actuals: Record<string, number>
     labels: Record<string, string>
   }
+  allDimensionTargets?: Record<string, Record<string, number>>
   summary: {
     totalSlots: number
     filledSlots: number
     openSlots: number
   }
+  brandBrief?: string | null
+  collectionBriefs?: Array<{
+    name: string
+    brief: string
+    slotCount: number
+  }>
+  feedback?: Array<{
+    key: string
+    label: string
+    suggestedValue: number
+    status: 'accepted' | 'rejected'
+    rationale?: string
+  }>
 }
 
 export interface AssortmentMixInsightRequest {
@@ -35,6 +53,22 @@ export interface AssortmentMixInsightRequest {
   mode: 'suggest' | 'critique'
   context: AssortmentMixContext
 }
+
+// ─── Structured Suggest Response ────────────────────────────────────
+
+export const suggestResponseSchema = z.object({
+  suggestions: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      value: z.number(),
+      rationale: z.string(),
+    }),
+  ),
+  summary: z.string(),
+})
+
+export type SuggestResponse = z.infer<typeof suggestResponseSchema>
 
 // ─── Union ──────────────────────────────────────────────────────────
 
