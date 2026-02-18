@@ -5,9 +5,20 @@ import { usePathname } from "next/navigation"
 import { cn } from "@repo/ui/utils"
 import { productSections } from "./product-config"
 
+// ─── Types ──────────────────────────────────────────────────────────
+
+interface SidebarCollection {
+  code: string
+  name: string
+}
+
+interface ProductSidebarProps {
+  collections: SidebarCollection[]
+}
+
 // ─── Component ──────────────────────────────────────────────────────
 
-export function ProductSidebar() {
+export function ProductSidebar({ collections }: ProductSidebarProps) {
   const pathname = usePathname()
 
   const isSectionActive = (href: string) => {
@@ -16,7 +27,6 @@ export function ProductSidebar() {
   }
 
   const lifecycleSections = productSections.filter(s => s.group === 'lifecycle')
-  const referenceSections = productSections.filter(s => s.group === 'reference')
   const adminSections = productSections.filter(s => s.group === 'admin')
 
   return (
@@ -59,19 +69,20 @@ export function ProductSidebar() {
           })}
         </ol>
 
-        {/* Reference catalog */}
+        {/* Collections — driven by taxonomy DB */}
         <p className="depot-label mt-8 mb-3 px-2">
           Collections
         </p>
 
         <ol className="flex flex-col gap-0.5">
-          {referenceSections.map((section, i) => {
-            const isActive = isSectionActive(section.href)
+          {collections.map((col, i) => {
+            const href = `/internal/product/collections/${col.code}`
+            const isActive = isSectionActive(href)
 
             return (
-              <li key={section.href}>
+              <li key={col.code}>
                 <Link
-                  href={section.href}
+                  href={href}
                   className={cn(
                     "flex items-center gap-3 px-2 py-2 text-[11px] tracking-[0.06em] transition-colors",
                     isActive
@@ -82,7 +93,7 @@ export function ProductSidebar() {
                   <span className="text-[9px] font-light text-[var(--depot-faint)] tabular-nums w-4">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="truncate">{section.title}</span>
+                  <span className="truncate">{col.name}</span>
                 </Link>
               </li>
             )

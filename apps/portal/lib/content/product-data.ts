@@ -147,6 +147,8 @@ export interface TrimStandard {
 
 export interface Collection {
   slug: string
+  /** Taxonomy code — links this content to the taxonomy `collections` table */
+  taxonomyCode: string
   name: string
   id: string
   leadDesigner: string
@@ -248,6 +250,7 @@ export const collections: Collection[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     slug: "core-essentials",
+    taxonomyCode: "core",
     name: "Core Essentials",
     id: "CE-V1",
     leadDesigner: "M. Sullivan",
@@ -702,6 +705,7 @@ export const collections: Collection[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     slug: "material-collection",
+    taxonomyCode: "material",
     name: "Material Collection",
     id: "MC-V1",
     leadDesigner: "M. Sullivan",
@@ -881,6 +885,7 @@ export const collections: Collection[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     slug: "origin-collection",
+    taxonomyCode: "origin",
     name: "Origin Collection",
     id: "OC-V1",
     leadDesigner: "M. Sullivan",
@@ -1056,6 +1061,7 @@ export const collections: Collection[] = [
   // ═══════════════════════════════════════════════════════════════════
   {
     slug: "coastal-function",
+    taxonomyCode: "function",
     name: "Coastal Function",
     id: "CF-V1",
     leadDesigner: "J. Briggs",
@@ -1249,6 +1255,10 @@ export const collections: Collection[] = [
 
 export function getCollection(slug: string): Collection | undefined {
   return collections.find((c) => c.slug === slug)
+}
+
+export function getCollectionByTaxonomyCode(code: string): Collection | undefined {
+  return collections.find((c) => c.taxonomyCode === code)
 }
 
 export function getGarment(

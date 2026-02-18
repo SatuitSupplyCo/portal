@@ -11,6 +11,7 @@ import { InlineSvg } from "@/components/product/InlineSvg"
 import { useShell } from "@/components/shell/ShellProvider"
 import {
   getCollection,
+  getCollectionByTaxonomyCode,
   roleDisplayMap,
 } from "@/lib/content/product-data"
 import type { Garment } from "@/lib/content/product-data"
@@ -22,8 +23,10 @@ export default function CollectionPage({
 }: {
   params: Promise<{ collection: string }>
 }) {
-  const { collection: slug } = use(params)
-  const collection = getCollection(slug)
+  const { collection: code } = use(params)
+
+  // Look up by taxonomy code first, then fall back to legacy slug
+  const collection = getCollectionByTaxonomyCode(code) ?? getCollection(code)
   if (!collection) notFound()
 
   const [selectedGarment, setSelectedGarment] = useState<Garment | null>(null)

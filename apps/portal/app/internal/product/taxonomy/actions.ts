@@ -157,6 +157,7 @@ export async function createCollection(data: {
       sortOrder: data.sortOrder ?? 0,
     }).returning();
     revalidatePath('/internal/product/taxonomy');
+    revalidatePath('/internal/product', 'layout');
     return { success: true, data: { id: col!.id } };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -174,6 +175,7 @@ export async function updateCollection(id: string, data: {
   await requireAdmin();
   await db.update(collections).set(data).where(eq(collections.id, id));
   revalidatePath('/internal/product/taxonomy');
+  revalidatePath('/internal/product', 'layout');
   return { success: true };
 }
 
@@ -650,10 +652,12 @@ export async function deleteCollection(id: string): Promise<DeleteResult> {
     if (usage.inUse) {
       await db.update(collections).set({ status: 'deprecated' }).where(eq(collections.id, id));
       revalidatePath('/internal/product/taxonomy');
+      revalidatePath('/internal/product', 'layout');
       return { success: true, action: 'archived' };
     }
     await db.delete(collections).where(eq(collections.id, id));
     revalidatePath('/internal/product/taxonomy');
+    revalidatePath('/internal/product', 'layout');
     return { success: true, action: 'deleted' };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };

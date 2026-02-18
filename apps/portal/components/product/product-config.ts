@@ -3,10 +3,10 @@
 export interface ProductSection {
   title: string
   href: string
-  group?: 'lifecycle' | 'reference' | 'admin'
+  group?: 'lifecycle' | 'admin'
 }
 
-// ─── All sections ────────────────────────────────────────────────────
+// ─── Static sections (collections come from the taxonomy DB) ─────────
 
 export const productSections: ProductSection[] = [
   // Lifecycle hub
@@ -24,28 +24,6 @@ export const productSections: ProductSection[] = [
     title: "Core Programs",
     href: "/internal/product/core",
     group: 'lifecycle',
-  },
-
-  // Reference catalog
-  {
-    title: "Core Essentials",
-    href: "/internal/product/collections/core-essentials",
-    group: 'reference',
-  },
-  {
-    title: "Material Collection",
-    href: "/internal/product/collections/material-collection",
-    group: 'reference',
-  },
-  {
-    title: "Origin Collection",
-    href: "/internal/product/collections/origin-collection",
-    group: 'reference',
-  },
-  {
-    title: "Coastal Function",
-    href: "/internal/product/collections/coastal-function",
-    group: 'reference',
   },
 
   // Admin — taxonomy management

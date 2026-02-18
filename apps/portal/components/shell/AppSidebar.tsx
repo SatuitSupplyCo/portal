@@ -104,10 +104,9 @@ const sourcingSectionNav: NavItem[] = [
 
 const productSectionNav: NavItem[] = [
   { title: "Product System", href: "/internal/product" },
-  { title: "Core Essentials", href: "/internal/product/core-essentials" },
-  { title: "Material Collection", href: "/internal/product/material-collection" },
-  { title: "Origin Collection", href: "/internal/product/origin-collection" },
-  { title: "Coastal Function", href: "/internal/product/coastal-function" },
+  { title: "Seasons", href: "/internal/product/seasons" },
+  { title: "Core Programs", href: "/internal/product/core" },
+  { title: "Taxonomy", href: "/internal/product/taxonomy" },
 ]
 
 const studioSectionNav: NavItem[] = [
