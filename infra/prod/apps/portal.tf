@@ -128,7 +128,7 @@ resource "aws_ecs_task_definition" "portal" {
         },
         {
           name      = "AWS_BEARER_TOKEN_BEDROCK"
-          valueFrom = data.aws_secretsmanager_secret.bedrock_api_key.arn
+          valueFrom = "${data.aws_secretsmanager_secret.bedrock_api_key.arn}:AWS_BEARER_TOKEN_BEDROCK::"
         },
       ]
 

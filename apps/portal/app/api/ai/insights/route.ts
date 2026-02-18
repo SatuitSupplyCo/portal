@@ -34,13 +34,16 @@ export async function POST(req: Request) {
       temperature: 0.4,
     })
 
-    // Await the first chunk to surface credential / provider errors
-    // before committing to a 200 streaming response.
     const text = await result.text
+    if (!text) {
+      console.error('[ai/insights] Empty response from model')
+      return new Response('Empty response from AI model', { status: 502 })
+    }
     return new Response(text)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'AI generation failed'
-    console.error('[ai/insights]', msg)
+    const full = e instanceof Error ? e.stack ?? e.message : String(e)
+    console.error('[ai/insights]', full)
     return new Response(msg, { status: 502 })
   }
 }
