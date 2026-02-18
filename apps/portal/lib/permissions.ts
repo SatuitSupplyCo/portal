@@ -4,6 +4,9 @@
  * Maps product_role values to specific lifecycle capabilities.
  * These are used by server actions to gate operations and by
  * UI components to conditionally render controls.
+ *
+ * Portal-level roles (owner, admin) grant elevated product permissions
+ * even when productRole is unset, so site owners aren't locked out.
  */
 
 export type ProductRole =
@@ -13,72 +16,96 @@ export type ProductRole =
   | 'external_designer'
   | 'factory_partner';
 
+export type PortalRole =
+  | 'owner'
+  | 'admin'
+  | 'editor'
+  | 'internal_viewer'
+  | 'partner_viewer'
+  | 'vendor_viewer';
+
+function isPortalAdmin(portalRole?: PortalRole | string | null): boolean {
+  return portalRole === 'owner' || portalRole === 'admin';
+}
+
 // ─── Studio permissions ─────────────────────────────────────────────
 
-export function canSubmitStudio(role: ProductRole | null): boolean {
+export function canSubmitStudio(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['studio_contributor', 'product_lead', 'founder', 'external_designer'].includes(role);
 }
 
-export function canSubmitForReview(role: ProductRole | null): boolean {
+export function canSubmitForReview(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['studio_contributor', 'product_lead', 'founder'].includes(role);
 }
 
-export function canPromoteToConcept(role: ProductRole | null): boolean {
+export function canPromoteToConcept(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['product_lead', 'founder'].includes(role);
 }
 
 // ─── Season & slot permissions ──────────────────────────────────────
 
-export function canManageSeasons(role: ProductRole | null): boolean {
+export function canManageSeasons(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['product_lead', 'founder'].includes(role);
 }
 
-export function canFillSeasonSlot(role: ProductRole | null): boolean {
+export function canFillSeasonSlot(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['product_lead', 'founder'].includes(role);
 }
 
 // ─── Concept lifecycle permissions ──────────────────────────────────
 
-export function canApproveTransition(role: ProductRole | null): boolean {
+export function canApproveTransition(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['product_lead', 'founder'].includes(role);
 }
 
-export function canOverride(role: ProductRole | null): boolean {
+export function canOverride(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return role === 'founder';
 }
 
-export function canKill(role: ProductRole | null): boolean {
+export function canKill(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return role === 'founder';
 }
 
 // ─── Core program permissions ───────────────────────────────────────
 
-export function canManageCorePrograms(role: ProductRole | null): boolean {
+export function canManageCorePrograms(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return ['product_lead', 'founder'].includes(role);
 }
 
 // ─── Visibility permissions ─────────────────────────────────────────
 
-export function canViewSpecs(role: ProductRole | null): boolean {
+export function canViewSpecs(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return true; // all product roles can view specs
 }
 
-export function canViewMargins(role: ProductRole | null): boolean {
+export function canViewMargins(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return role !== 'factory_partner';
 }
 
-export function canCommentOnAnyStage(role: ProductRole | null): boolean {
+export function canCommentOnAnyStage(role: ProductRole | null, portalRole?: PortalRole | string | null): boolean {
+  if (isPortalAdmin(portalRole)) return true;
   if (!role) return false;
   return role === 'founder';
 }

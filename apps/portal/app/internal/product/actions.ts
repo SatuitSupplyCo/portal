@@ -59,7 +59,7 @@ type ActionResult = { success: true; data?: unknown } | { success: false; error:
 
 export async function submitForReview(entryId: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canSubmitForReview(user.productRole as ProductRole)) {
+  if (!canSubmitForReview(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions to submit for review.' };
   }
 
@@ -107,7 +107,7 @@ export async function requestRevisions(
   notes: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canPromoteToConcept(user.productRole as ProductRole)) {
+  if (!canPromoteToConcept(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Only Product Lead or Founder can request revisions.' };
   }
 
@@ -134,7 +134,7 @@ export async function promoteToConcept(
   seasonSlotId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canPromoteToConcept(user.productRole as ProductRole)) {
+  if (!canPromoteToConcept(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Only Product Lead or Founder can promote to concept.' };
   }
 
@@ -243,7 +243,7 @@ export async function createSeason(data: {
     constructionTargets?: Record<string, number>;
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -293,7 +293,7 @@ export async function updateSeason(
   }>,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -305,7 +305,7 @@ export async function updateSeason(
 
 export async function lockSeason(id: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -330,7 +330,7 @@ export async function createSeasonSlot(
   },
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canFillSeasonSlot(user.productRole as ProductRole)) {
+  if (!canFillSeasonSlot(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -412,7 +412,7 @@ export async function createSeasonSlot(
 
 export async function removeSeasonSlot(slotId: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -439,7 +439,7 @@ export async function addCoreRef(
   selectedColorways: string[],
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -460,7 +460,7 @@ export async function advanceConcept(
   notes?: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canApproveTransition(user.productRole as ProductRole)) {
+  if (!canApproveTransition(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions to advance concept.' };
   }
 
@@ -515,7 +515,7 @@ export async function killConcept(
   reason: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canKill(user.productRole as ProductRole)) {
+  if (!canKill(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Only Founder can kill a concept.' };
   }
 
@@ -558,7 +558,7 @@ export async function linkSourcingRecord(
   recordId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canApproveTransition(user.productRole as ProductRole)) {
+  if (!canApproveTransition(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -599,7 +599,7 @@ export async function createCoreProgram(data: {
   baseColorways?: string[];
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageCorePrograms(user.productRole as ProductRole)) {
+  if (!canManageCorePrograms(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -629,13 +629,13 @@ export async function updateCoreProgram(
   isOverride?: boolean,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageCorePrograms(user.productRole as ProductRole)) {
+  if (!canManageCorePrograms(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
   // Fabric/block changes require founder override
   if ((data.fabricSpec !== undefined || data.blockId !== undefined) && !isOverride) {
-    if (!canOverride(user.productRole as ProductRole)) {
+    if (!canOverride(user.productRole as ProductRole, user.role)) {
       return {
         success: false,
         error: 'Fabric spec and block changes require Founder override.',
@@ -656,7 +656,7 @@ export async function updateSeasonColors(
   colorEntryIds: string[],
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
@@ -706,7 +706,7 @@ export async function confirmSeasonColor(
   studioEntryId: string,
 ): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canManageSeasons(user.productRole as ProductRole)) {
+  if (!canManageSeasons(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 

@@ -42,7 +42,7 @@ export async function createStudioEntry(data: {
   categoryMetadata?: Record<string, unknown>;
 }): Promise<ActionResult> {
   const user = await getSessionUser();
-  if (!canSubmitStudio(user.productRole as ProductRole)) {
+  if (!canSubmitStudio(user.productRole as ProductRole, user.role)) {
     return { success: false, error: 'Insufficient permissions.' };
   }
 
