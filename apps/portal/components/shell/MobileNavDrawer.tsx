@@ -58,6 +58,10 @@ type NavItem = {
 const navigationMap: Record<string, NavItem[]> = {
   internal: [
     { title: "Dashboard", href: "/internal", icon: LayoutDashboard },
+    { title: "Brand", href: "/internal/brand", icon: BookOpen },
+    { title: "Studio", href: "/internal/studio", icon: Palette },
+    { title: "Product", href: "/internal/product", icon: Shirt },
+    { title: "Sourcing", href: "/internal/sourcing", icon: Factory },
     { title: "Documents", href: "/internal/docs", icon: FileText },
     { title: "Assets", href: "/internal/assets", icon: Image },
     { title: "Tech Packs", href: "/internal/techpacks", icon: Package },
