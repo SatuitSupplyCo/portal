@@ -1,0 +1,46 @@
+import { streamText } from 'ai'
+import { auth } from '@repo/auth'
+import { insightModel } from '@/lib/ai/client'
+import { buildPrompt } from '@/lib/ai/prompts'
+
+export const maxDuration = 30
+
+export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  const body = await req.json()
+  const { feature, mode, context } = body ?? {}
+
+  if (!feature || !mode || !context) {
+    return new Response('Missing feature, mode, or context', { status: 400 })
+  }
+
+  let prompt: { system: string; prompt: string }
+  try {
+    prompt = buildPrompt(feature, mode, context)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Invalid request'
+    return new Response(message, { status: 400 })
+  }
+
+  try {
+    const result = streamText({
+      model: insightModel,
+      system: prompt.system,
+      prompt: prompt.prompt,
+      temperature: 0.4,
+    })
+
+    // Await the first chunk to surface credential / provider errors
+    // before committing to a 200 streaming response.
+    const text = await result.text
+    return new Response(text)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'AI generation failed'
+    console.error('[ai/insights]', msg)
+    return new Response(msg, { status: 502 })
+  }
+}

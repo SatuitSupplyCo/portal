@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react'
 import { PlanningTargetsPanel, type DimensionConfig } from './PlanningTargetsPanel'
 import { EditTargetsDialog, type EditTargetsTab, type DimensionOption } from './EditTargetsDialog'
 import { useDimensionFilter } from './DimensionFilterProvider'
+import type { AssortmentMixContext } from '@/lib/ai/types'
 
 // ─── Dimension key → dialog tab mapping ──────────────────────────────
 
@@ -45,6 +46,10 @@ interface AssortmentMixSectionProps {
     gender: DimensionOption[]
     ageGroup: DimensionOption[]
   }
+  /** Season metadata for AI insight panel */
+  seasonContext?: AssortmentMixContext['season']
+  /** Slot fill summary for AI insight panel */
+  slotSummary?: AssortmentMixContext['summary']
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -64,6 +69,8 @@ export function AssortmentMixSection({
   currentGenderTargets,
   currentAgeGroupTargets,
   dimensionOptions,
+  seasonContext,
+  slotSummary,
 }: AssortmentMixSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogTab, setDialogTab] = useState<EditTargetsTab>('category')
@@ -121,6 +128,8 @@ export function AssortmentMixSection({
         onEditTargets={handleEditTargets}
         selectedFilter={filter}
         onFilterSelect={handleFilterSelect}
+        seasonContext={seasonContext}
+        slotSummary={slotSummary}
       />
 
       {/* Single shared dialog instance */}

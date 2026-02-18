@@ -576,6 +576,19 @@ export default async function SeasonDetailPage({
                   currentGenderTargets={genderTargets}
                   currentAgeGroupTargets={ageGroupTargets}
                   dimensionOptions={dimensionOptions}
+                  seasonContext={{
+                    code: season.code,
+                    name: season.name,
+                    type: season.seasonType,
+                    description: season.description ?? null,
+                    launchDate: season.launchDate?.toISOString().split('T')[0] ?? null,
+                    targetSlotCount: season.targetSkuCount,
+                  }}
+                  slotSummary={{
+                    totalSlots: activeSlots.length,
+                    filledSlots: filledSlots.length,
+                    openSlots: openSlots.length,
+                  }}
                 />
               </section>
             </>

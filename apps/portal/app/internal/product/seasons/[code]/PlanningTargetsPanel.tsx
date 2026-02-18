@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { cn } from '@repo/ui/utils'
 import { Crosshair, Pencil, AlertTriangle, X } from 'lucide-react'
 import type { DimensionFilter } from './DimensionFilterProvider'
+import { AssortmentInsightPanel } from './AssortmentInsightPanel'
+import type { AssortmentMixContext } from '@/lib/ai/types'
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -33,6 +35,10 @@ interface PlanningTargetsPanelProps {
   selectedFilter?: DimensionFilter | null
   /** Called when a value row is clicked to toggle filter */
   onFilterSelect?: (dimensionKey: string, valueCode: string) => void
+  /** Season metadata for AI insight panel */
+  seasonContext?: AssortmentMixContext['season']
+  /** Slot fill summary for AI insight panel */
+  slotSummary?: AssortmentMixContext['summary']
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -44,6 +50,8 @@ export function PlanningTargetsPanel({
   onEditTargets,
   selectedFilter,
   onFilterSelect,
+  seasonContext,
+  slotSummary,
 }: PlanningTargetsPanelProps) {
   const [activeKey, setActiveKey] = useState(dimensions[0]?.key ?? '')
 
@@ -129,6 +137,8 @@ export function PlanningTargetsPanel({
           onEditTargets={onEditTargets}
           selectedFilter={selectedFilter}
           onFilterSelect={onFilterSelect}
+          seasonContext={seasonContext}
+          slotSummary={slotSummary}
         />
       )}
     </div>
@@ -145,6 +155,8 @@ function BreakdownView({
   onEditTargets,
   selectedFilter,
   onFilterSelect,
+  seasonContext,
+  slotSummary,
 }: {
   dimension: DimensionConfig
   totalSlots: number
@@ -153,6 +165,8 @@ function BreakdownView({
   onEditTargets?: (dimensionKey: string) => void
   selectedFilter?: DimensionFilter | null
   onFilterSelect?: (dimensionKey: string, valueCode: string) => void
+  seasonContext?: AssortmentMixContext['season']
+  slotSummary?: AssortmentMixContext['summary']
 }) {
   const { targets, actuals, labels, editTab } = dimension
 
@@ -279,15 +293,26 @@ function BreakdownView({
           )}
         </div>
 
-        {/* Right: AI advice placeholder */}
-        <div className="border border-dashed border-[var(--depot-hairline)] rounded-md px-5 py-4 flex flex-col items-center justify-center text-center min-h-[120px]">
-          <div className="h-6 w-6 rounded-full bg-[var(--depot-surface-alt)] flex items-center justify-center mb-2">
-            <span className="text-[11px] text-[var(--depot-faint)]">✦</span>
+        {/* Right: AI insights panel */}
+        {seasonContext && slotSummary ? (
+          <AssortmentInsightPanel
+            seasonContext={seasonContext}
+            dimension={{
+              key: dimension.key,
+              label: dimension.label,
+              targets: dimension.targets,
+              actuals: dimension.actuals.counts,
+              labels: dimension.labels,
+            }}
+            summary={slotSummary}
+          />
+        ) : (
+          <div className="border border-dashed border-[var(--depot-hairline)] rounded-md px-5 py-4 flex flex-col items-center justify-center text-center min-h-[120px]">
+            <p className="text-[10px] text-[var(--depot-faint)] leading-relaxed max-w-[200px]">
+              AI insights unavailable
+            </p>
           </div>
-          <p className="text-[10px] text-[var(--depot-faint)] leading-relaxed max-w-[200px]">
-            AI-driven insights for <span className="font-medium text-[var(--depot-muted)]">{dimension.label}</span> will appear here
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )
