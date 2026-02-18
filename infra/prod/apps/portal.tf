@@ -12,6 +12,10 @@ data "aws_secretsmanager_secret" "auth_google_secret" {
   name = "satuit/auth-google-secret"
 }
 
+data "aws_secretsmanager_secret" "bedrock_api_key" {
+  name = "satuit/bedrock-api-key"
+}
+
 # ── Portal: ALB Target Group ─────────────────────────────────────────────────
 
 resource "aws_lb_target_group" "portal" {
@@ -102,6 +106,7 @@ resource "aws_ecs_task_definition" "portal" {
         { name = "AUTH_ALLOWED_DOMAIN", value = "satuitsupply.com" },
         { name = "REDIS_URL", value = "redis://${local.infra.redis_endpoint}:${local.infra.redis_port}" },
         { name = "SES_FROM_EMAIL", value = "Satuit Supply <noreply@${var.domain_name}>" },
+        { name = "AWS_REGION", value = var.aws_region },
       ]
 
       secrets = [
@@ -120,6 +125,10 @@ resource "aws_ecs_task_definition" "portal" {
         {
           name      = "AUTH_GOOGLE_SECRET"
           valueFrom = data.aws_secretsmanager_secret.auth_google_secret.arn
+        },
+        {
+          name      = "AWS_BEARER_TOKEN_BEDROCK"
+          valueFrom = data.aws_secretsmanager_secret.bedrock_api_key.arn
         },
       ]
 
