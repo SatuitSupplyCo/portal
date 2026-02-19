@@ -30,6 +30,8 @@ import { type SeasonColorEntry } from "./SeasonColorPalette"
 import { SeasonColorPicker } from "./SeasonColorPicker"
 import { DimensionFilterProvider, type SlotFilterDatum } from "./DimensionFilterProvider"
 import { FilteredSlotGrid, type SlotGridEntry } from "./FilteredSlotGrid"
+import { InfoTooltip, type GlossaryEntry } from "@/components/InfoTooltip"
+import { glossaryTerms } from "@repo/db/schema"
 
 // ─── Metadata ────────────────────────────────────────────────────────
 
@@ -174,6 +176,7 @@ export default async function SeasonDetailPage({
     taxonomySizeScales,
     allSeasons,
     brandContextRows,
+    glossaryRows,
   ] = await Promise.all([
     db.query.productCategories.findMany({
       with: {
@@ -196,7 +199,12 @@ export default async function SeasonDetailPage({
     db.select().from(sizeScalesTable).orderBy(asc(sizeScalesTable.sortOrder)),
     db.query.seasons.findMany({ orderBy: (s, { desc }) => [desc(s.createdAt)] }),
     db.query.brandContext.findMany({ limit: 1 }),
+    db.select().from(glossaryTerms),
   ])
+
+  const glossary: Record<string, GlossaryEntry> = Object.fromEntries(
+    glossaryRows.map((t) => [t.slug, { slug: t.slug, term: t.term, definition: t.definition }]),
+  )
 
   const productHierarchy = taxonomyCategories.map((cat) => ({
     id: cat.id,
@@ -488,7 +496,10 @@ export default async function SeasonDetailPage({
                 {season.seasonType === 'minor' && season.minorMaxSkus && (
                   <>
                     <span className="text-[var(--depot-hairline)]">·</span>
-                    <span>Hard cap: {season.minorMaxSkus} SKUs</span>
+                    <span className="inline-flex items-center gap-1">
+                      Hard cap: {season.minorMaxSkus} SKUs
+                      <InfoTooltip slug="hard-cap" glossary={glossary} />
+                    </span>
                   </>
                 )}
               </div>
@@ -549,6 +560,7 @@ export default async function SeasonDetailPage({
                   targetSlotCount={season.targetSkuCount}
                   marginTarget={season.marginTarget}
                   targetEvergreenPct={season.targetEvergreenPct}
+                  glossary={glossary}
                 />
               </div>
             )}
@@ -621,6 +633,7 @@ export default async function SeasonDetailPage({
                     filledSlots: filledSlots.length,
                     openSlots: openSlots.length,
                   }}
+                  glossary={glossary}
                 />
               </section>
             </>
@@ -633,21 +646,24 @@ export default async function SeasonDetailPage({
               {/* ─── Metrics Row ──────────────────────────────────── */}
               <section className="px-12 py-6 border-b border-[var(--depot-border)]">
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-6">
-                  <MetricBlock label="Target Slots" value={season.targetSkuCount} />
+                  <MetricBlock label="Target Slots" value={season.targetSkuCount} glossarySlug="target-slots" glossary={glossary} />
                   <MetricBlock label="Filled" value={filledSlots.length} />
                   <MetricBlock label="Open" value={openSlots.length} />
-                  <MetricBlock label="Fill Rate" value={`${fillRate}%`} />
+                  <MetricBlock label="Fill Rate" value={`${fillRate}%`} glossarySlug="fill-rate" glossary={glossary} />
                   {season.marginTarget && (
-                    <MetricBlock label="Margin Target" value={`${season.marginTarget}%`} />
+                    <MetricBlock label="Margin Target" value={`${season.marginTarget}%`} glossarySlug="margin-target" glossary={glossary} />
                   )}
-                  <MetricBlock label="Complexity" value={complexityUsed} />
+                  <MetricBlock label="Complexity" value={complexityUsed} glossarySlug="complexity" glossary={glossary} />
                 </div>
               </section>
 
               {/* ─── Mix Simulation ──────────────────────────────── */}
               {(Object.keys(collectionMix).length > 0 || unassignedCount > 0) && (
                 <section className="px-12 py-6 border-b border-[var(--depot-border)]">
-                  <p className="depot-label mb-4">Collection Mix</p>
+                  <p className="depot-label mb-4 flex items-center gap-1.5">
+                    Collection Mix
+                    <InfoTooltip slug="collection-mix" glossary={glossary} />
+                  </p>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     {Object.entries(COLLECTION_LABELS).map(([key, label]) => {
                       const data = collectionMix[key]
@@ -704,7 +720,10 @@ export default async function SeasonDetailPage({
           {/* ─── Slot Grid (both modes) ─────────────────────────── */}
           <section className="px-12 py-8 border-b border-[var(--depot-border)]">
             <div className="flex items-center justify-between mb-6">
-              <p className="depot-label" style={{ marginBottom: 0 }}>Season Slots</p>
+              <p className="depot-label flex items-center gap-1.5" style={{ marginBottom: 0 }}>
+                Season Slots
+                <InfoTooltip slug="season-slot" glossary={glossary} />
+              </p>
               <AddSlotDialog
                 seasonId={season.id}
                 seasonName={season.name}
@@ -735,7 +754,10 @@ export default async function SeasonDetailPage({
         {/* ─── Core Program References ──────────────────────────── */}
         {season.coreRefs.length > 0 && (
           <section className="px-12 py-8">
-            <p className="depot-label mb-6">Evergreen Programs</p>
+            <p className="depot-label mb-6 flex items-center gap-1.5">
+              Evergreen Programs
+              <InfoTooltip slug="core-program" glossary={glossary} />
+            </p>
             <div className="grid md:grid-cols-2 gap-4">
               {season.coreRefs.map((ref) => (
                 <Link
@@ -770,10 +792,25 @@ export default async function SeasonDetailPage({
 
 // ─── Components ─────────────────────────────────────────────────────
 
-function MetricBlock({ label, value }: { label: string; value: string | number }) {
+function MetricBlock({
+  label,
+  value,
+  glossarySlug,
+  glossary,
+}: {
+  label: string
+  value: string | number
+  glossarySlug?: string
+  glossary?: Record<string, GlossaryEntry>
+}) {
   return (
     <div>
-      <p className="text-[10px] text-[var(--depot-faint)] uppercase tracking-wider">{label}</p>
+      <p className="text-[10px] text-[var(--depot-faint)] uppercase tracking-wider flex items-center gap-1">
+        {label}
+        {glossarySlug && glossary && (
+          <InfoTooltip slug={glossarySlug} glossary={glossary} />
+        )}
+      </p>
       <p className="text-sm font-medium text-[var(--depot-ink)] tabular-nums mt-0.5">{String(value)}</p>
     </div>
   )

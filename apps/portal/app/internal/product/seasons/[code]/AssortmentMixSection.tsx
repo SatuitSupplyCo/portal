@@ -6,6 +6,7 @@ import { PlanningTargetsPanel, type DimensionConfig } from './PlanningTargetsPan
 import { EditTargetsDialog, type EditTargetsTab, type DimensionOption } from './EditTargetsDialog'
 import { useDimensionFilter } from './DimensionFilterProvider'
 import type { AssortmentMixContext } from '@/lib/ai/types'
+import { InfoTooltip, type GlossaryEntry } from '@/components/InfoTooltip'
 
 // ─── Dimension key → dialog tab mapping ──────────────────────────────
 
@@ -56,6 +57,7 @@ interface AssortmentMixSectionProps {
   collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   /** Slot fill summary for AI insight panel */
   slotSummary?: AssortmentMixContext['summary']
+  glossary?: Record<string, GlossaryEntry>
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -80,6 +82,7 @@ export function AssortmentMixSection({
   brandBrief,
   collectionBriefs,
   slotSummary,
+  glossary,
 }: AssortmentMixSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogTab, setDialogTab] = useState<EditTargetsTab>('category')
@@ -141,8 +144,9 @@ export function AssortmentMixSection({
     <>
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
-        <p className="depot-label" style={{ marginBottom: 0 }}>
+        <p className="depot-label flex items-center gap-1.5" style={{ marginBottom: 0 }}>
           Assortment Mix
+          <InfoTooltip slug="assortment-mix" glossary={glossary} />
         </p>
         <button
           type="button"

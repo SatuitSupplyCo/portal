@@ -15,4 +15,5 @@ export * from './brand';
 export * from './permissions';
 export * from './rbac';
 export * from './audit';
+export * from './glossary';
 export * from './relations';
