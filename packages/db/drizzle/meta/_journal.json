@@ -43,6 +43,13 @@
       "when": 1771450575581,
       "tag": "0005_deep_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771454400000,
+      "tag": "0006_seed_glossary_terms",
+      "breakpoints": true
     }
   ]
 }
