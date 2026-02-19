@@ -29,6 +29,20 @@
       "when": 1771382361201,
       "tag": "0003_seed_rbac_permissions_and_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771391416180,
+      "tag": "0004_fixed_exodus",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771450575581,
+      "tag": "0005_deep_talisman",
+      "breakpoints": true
     }
   ]
 }

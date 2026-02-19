@@ -24,10 +24,10 @@ resource "aws_ecr_lifecycle_policy" "apps" {
         rulePriority = 1
         description  = "Keep last 25 tagged images"
         selection = {
-          tagStatus   = "tagged"
+          tagStatus     = "tagged"
           tagPrefixList = ["sha-"]
-          countType   = "imageCountMoreThan"
-          countNumber = 25
+          countType     = "imageCountMoreThan"
+          countNumber   = 25
         }
         action = {
           type = "expire"

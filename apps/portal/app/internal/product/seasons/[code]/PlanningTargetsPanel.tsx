@@ -37,8 +37,16 @@ interface PlanningTargetsPanelProps {
   onFilterSelect?: (dimensionKey: string, valueCode: string) => void
   /** Season metadata for AI insight panel */
   seasonContext?: AssortmentMixContext['season']
+  /** All dimension targets for cross-dimensional AI reasoning */
+  allDimensionTargets?: Record<string, Record<string, number>>
+  /** Brand brief for AI context */
+  brandBrief?: string | null
+  /** Collection briefs for AI context */
+  collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   /** Slot fill summary for AI insight panel */
   slotSummary?: AssortmentMixContext['summary']
+  /** Called when AI suggestions should be applied to the edit dialog */
+  onApplySuggestions?: (dimensionKey: string, targets: Record<string, number>) => void
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -51,7 +59,11 @@ export function PlanningTargetsPanel({
   selectedFilter,
   onFilterSelect,
   seasonContext,
+  allDimensionTargets,
+  brandBrief,
+  collectionBriefs,
   slotSummary,
+  onApplySuggestions,
 }: PlanningTargetsPanelProps) {
   const [activeKey, setActiveKey] = useState(dimensions[0]?.key ?? '')
 
@@ -138,7 +150,11 @@ export function PlanningTargetsPanel({
           selectedFilter={selectedFilter}
           onFilterSelect={onFilterSelect}
           seasonContext={seasonContext}
+          allDimensionTargets={allDimensionTargets}
+          brandBrief={brandBrief}
+          collectionBriefs={collectionBriefs}
           slotSummary={slotSummary}
+          onApplySuggestions={onApplySuggestions}
         />
       )}
     </div>
@@ -156,7 +172,11 @@ function BreakdownView({
   selectedFilter,
   onFilterSelect,
   seasonContext,
+  allDimensionTargets,
+  brandBrief,
+  collectionBriefs,
   slotSummary,
+  onApplySuggestions,
 }: {
   dimension: DimensionConfig
   totalSlots: number
@@ -166,7 +186,11 @@ function BreakdownView({
   selectedFilter?: DimensionFilter | null
   onFilterSelect?: (dimensionKey: string, valueCode: string) => void
   seasonContext?: AssortmentMixContext['season']
+  allDimensionTargets?: Record<string, Record<string, number>>
+  brandBrief?: string | null
+  collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   slotSummary?: AssortmentMixContext['summary']
+  onApplySuggestions?: (dimensionKey: string, targets: Record<string, number>) => void
 }) {
   const { targets, actuals, labels, editTab } = dimension
 
@@ -304,7 +328,11 @@ function BreakdownView({
               actuals: dimension.actuals.counts,
               labels: dimension.labels,
             }}
+            allDimensionTargets={allDimensionTargets}
+            brandBrief={brandBrief}
+            collectionBriefs={collectionBriefs}
             summary={slotSummary}
+            onApplySuggestions={onApplySuggestions}
           />
         ) : (
           <div className="border border-dashed border-[var(--depot-hairline)] rounded-md px-5 py-4 flex flex-col items-center justify-center text-center min-h-[120px]">

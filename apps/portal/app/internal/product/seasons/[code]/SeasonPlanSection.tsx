@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { Pencil } from 'lucide-react'
 import { EditSeasonPlanDialog } from './EditSeasonPlanDialog'
+import { InfoTooltip, type GlossaryEntry } from '@/components/InfoTooltip'
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface SeasonPlanSectionProps {
   targetSlotCount: number
   marginTarget: string | null
   targetEvergreenPct: number | null
+  glossary?: Record<string, GlossaryEntry>
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -34,6 +36,7 @@ export function SeasonPlanSection({
   targetSlotCount,
   marginTarget,
   targetEvergreenPct,
+  glossary,
 }: SeasonPlanSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -46,7 +49,10 @@ export function SeasonPlanSection({
         <div className="grid grid-cols-2 gap-x-8 gap-y-5">
           {/* Slots */}
           <div>
-            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1">Slots</p>
+            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1 flex items-center gap-1">
+              Slots
+              <InfoTooltip slug="target-slots" glossary={glossary} />
+            </p>
             <span className="text-lg font-semibold text-[var(--depot-ink)] tabular-nums leading-none">
               {totalSlots}
             </span>
@@ -68,7 +74,10 @@ export function SeasonPlanSection({
 
           {/* Margin */}
           <div>
-            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1">Margin</p>
+            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1 flex items-center gap-1">
+              Margin
+              <InfoTooltip slug="margin-target" glossary={glossary} />
+            </p>
             {marginTarget ? (
               <>
                 <span className="text-lg font-semibold text-[var(--depot-ink)] tabular-nums leading-none">
@@ -83,7 +92,10 @@ export function SeasonPlanSection({
 
           {/* Evergreen */}
           <div>
-            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1">Evergreen</p>
+            <p className="text-[9px] text-[var(--depot-faint)] uppercase tracking-widest mb-1 flex items-center gap-1">
+              Evergreen
+              <InfoTooltip slug="evergreen-pct" glossary={glossary} />
+            </p>
             <span className="text-lg font-semibold text-[var(--depot-ink)] tabular-nums leading-none">
               {evergreenPct}%
             </span>

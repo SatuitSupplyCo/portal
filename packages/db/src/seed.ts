@@ -31,6 +31,7 @@ import {
   rolePermissions,
   userRoles,
   users,
+  glossaryTerms,
 } from "./schema"
 import { eq, and, inArray } from "drizzle-orm"
 
@@ -875,6 +876,197 @@ export async function seedRbac() {
   console.log("")
 }
 
+// ─── Glossary Seed ──────────────────────────────────────────────────
+
+const GLOSSARY_TERMS: Array<{
+  slug: string
+  term: string
+  definition: string
+  category: string
+}> = [
+  // ── Planning ────────────────────────────────────────────────────
+  {
+    slug: "assortment-mix",
+    term: "Assortment Mix",
+    definition:
+      "The planned distribution of season slots across product dimensions such as category, construction, weight, and selling window. Defines the shape of the season.",
+    category: "planning",
+  },
+  {
+    slug: "target-slots",
+    term: "Target Slots",
+    definition:
+      "The total number of SKU slots planned for a season. Sets the capacity ceiling for the assortment.",
+    category: "planning",
+  },
+  {
+    slug: "fill-rate",
+    term: "Fill Rate",
+    definition:
+      "The percentage of planned season slots that have been filled with a SKU concept.",
+    category: "planning",
+  },
+  {
+    slug: "margin-target",
+    term: "Margin Target",
+    definition:
+      "The gross margin percentage the season is aiming to achieve across its assortment.",
+    category: "planning",
+  },
+  {
+    slug: "complexity",
+    term: "Complexity",
+    definition:
+      "A numeric score representing the production complexity of a concept. Seasons have a total complexity budget that constrains the assortment.",
+    category: "planning",
+  },
+  {
+    slug: "hard-cap",
+    term: "Hard Cap",
+    definition:
+      "The maximum number of SKUs allowed in a minor (drop) season. Enforces discipline on capsule releases.",
+    category: "planning",
+  },
+  {
+    slug: "collection-mix",
+    term: "Collection Mix",
+    definition:
+      "The distribution of season slots across collections (e.g. Core, Material Story, Function). Shows how the assortment is balanced.",
+    category: "planning",
+  },
+  {
+    slug: "evergreen-pct",
+    term: "Evergreen %",
+    definition:
+      "The share of season slots classified as Evergreen or Multi-Season tenure. Indicates how much of the assortment is carried forward vs. one-time.",
+    category: "planning",
+  },
+
+  // ── Taxonomy ────────────────────────────────────────────────────
+  {
+    slug: "selling-window",
+    term: "Selling Window",
+    definition:
+      "The retail period a product is designed for — e.g. Core/Year-Round, Spring/Summer, Fall/Winter, or Transitional.",
+    category: "taxonomy",
+  },
+  {
+    slug: "tenure",
+    term: "Tenure",
+    definition:
+      "How long a product stays in the assortment. Ranges from Evergreen (indefinite) to One-Time Capsule (single season).",
+    category: "taxonomy",
+  },
+  {
+    slug: "construction",
+    term: "Construction",
+    definition:
+      "The garment build method — e.g. Knit, Woven, Cut & Sew, Fleece, Jersey. Determines manufacturing requirements.",
+    category: "taxonomy",
+  },
+  {
+    slug: "weight-class",
+    term: "Weight Class",
+    definition:
+      "The material weight category — Light, Mid, Heavy, or Insulated. Affects seasonality, layering, and cost.",
+    category: "taxonomy",
+  },
+  {
+    slug: "fit-block",
+    term: "Fit Block",
+    definition:
+      "The base fit template for a garment — e.g. Modern Classic, Relaxed, Slim. Defines the silhouette family.",
+    category: "taxonomy",
+  },
+  {
+    slug: "use-case",
+    term: "Use Case",
+    definition:
+      "The intended wearing context — e.g. Everyday, Layering, Coastal Weather, Travel. Guides design and fabric decisions.",
+    category: "taxonomy",
+  },
+  {
+    slug: "size-scale",
+    term: "Size Scale",
+    definition:
+      "The sizing system used for a product — e.g. Alpha (S–XXL), Numeric Waist (28–38), or One Size.",
+    category: "taxonomy",
+  },
+  {
+    slug: "goods-class",
+    term: "Goods Class",
+    definition:
+      "Whether a product is Softgoods (apparel, textiles) or Hardgoods (accessories, equipment).",
+    category: "taxonomy",
+  },
+
+  // ── Lifecycle ───────────────────────────────────────────────────
+  {
+    slug: "season-slot",
+    term: "Season Slot",
+    definition:
+      "A planned position in a season's assortment. Slots start open and are filled when a SKU concept is assigned.",
+    category: "lifecycle",
+  },
+  {
+    slug: "sku-concept",
+    term: "SKU Concept",
+    definition:
+      "A product concept progressing through the lifecycle — from draft through spec, sampling, costing, and into production.",
+    category: "lifecycle",
+  },
+  {
+    slug: "core-program",
+    term: "Core Program",
+    definition:
+      "An evergreen product program (e.g. Fleece Program) that runs across seasons with a defined fabric spec, silhouettes, and base colorways.",
+    category: "lifecycle",
+  },
+  {
+    slug: "replacement-flag",
+    term: "Replacement",
+    definition:
+      "Indicates a slot is replacing an existing product rather than adding a net-new SKU to the assortment.",
+    category: "lifecycle",
+  },
+
+  // ── Product ─────────────────────────────────────────────────────
+  {
+    slug: "product-type",
+    term: "Product Type",
+    definition:
+      "The specific garment type within a subcategory — e.g. Short-Sleeve Tee, Quarter Zip, Chino.",
+    category: "product",
+  },
+  {
+    slug: "collection",
+    term: "Collection",
+    definition:
+      "A thematic grouping of products — e.g. Core (evergreen), Material Story (fabric-led), Function (performance), Origin (heritage).",
+    category: "product",
+  },
+]
+
+export async function seedGlossary() {
+  console.log("Seeding glossary terms...\n")
+
+  const existing = await db.select().from(glossaryTerms)
+  const existingSlugs = new Set(existing.map((t) => t.slug))
+
+  const toInsert = GLOSSARY_TERMS
+    .filter((t) => !existingSlugs.has(t.slug))
+    .map((t, i) => ({ ...t, sortOrder: i }))
+
+  if (toInsert.length > 0) {
+    await db.insert(glossaryTerms).values(toInsert)
+    console.log(`  Created ${toInsert.length} glossary terms`)
+  } else {
+    console.log(`  All ${GLOSSARY_TERMS.length} glossary terms already exist`)
+  }
+
+  console.log("")
+}
+
 export async function seed() {
   console.log("Seeding brand documents...\n")
 
@@ -929,6 +1121,7 @@ export async function seed() {
   await seedCorePrograms()
   await seedProductTaxonomy()
   await seedRbac()
+  await seedGlossary()
 
   console.log("Done!")
 }

@@ -2,8 +2,24 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { cn } from '@repo/ui/utils'
-import { Sparkles, RefreshCw, Crosshair, MessageSquareWarning } from 'lucide-react'
+import {
+  Sparkles,
+  RefreshCw,
+  Crosshair,
+  MessageSquareWarning,
+  Check,
+  X,
+  ArrowRight,
+} from 'lucide-react'
 import type { AssortmentMixContext } from '@/lib/ai/types'
+import type { SuggestResponse } from '@/lib/ai/types'
+
+// ─── Types ──────────────────────────────────────────────────────────
+
+interface FeedbackEntry {
+  status: 'accepted' | 'rejected'
+  rationale?: string
+}
 
 interface AssortmentInsightPanelProps {
   seasonContext: AssortmentMixContext['season']
@@ -14,22 +30,33 @@ interface AssortmentInsightPanelProps {
     actuals: Record<string, number>
     labels: Record<string, string>
   }
+  allDimensionTargets?: Record<string, Record<string, number>>
+  brandBrief?: string | null
+  collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   summary: AssortmentMixContext['summary']
+  onApplySuggestions?: (dimensionKey: string, targets: Record<string, number>) => void
 }
 
 export function AssortmentInsightPanel({
   seasonContext,
   dimension,
+  allDimensionTargets,
+  brandBrief,
+  collectionBriefs,
   summary,
+  onApplySuggestions,
 }: AssortmentInsightPanelProps) {
   const [completion, setCompletion] = useState('')
+  const [suggestResult, setSuggestResult] = useState<SuggestResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastMode, setLastMode] = useState<'suggest' | 'critique' | null>(null)
+  const [feedback, setFeedback] = useState<Record<string, FeedbackEntry>>({})
+  const [rejectingKey, setRejectingKey] = useState<string | null>(null)
+  const [rejectRationale, setRejectRationale] = useState('')
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll while streaming
   useEffect(() => {
     if (scrollRef.current && isLoading) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -43,8 +70,11 @@ export function AssortmentInsightPanel({
       prevDimKey.current = dimension.key
       abortRef.current?.abort()
       setCompletion('')
+      setSuggestResult(null)
       setError(null)
       setLastMode(null)
+      setFeedback({})
+      setRejectingKey(null)
     }
   }, [dimension.key])
 
@@ -56,8 +86,21 @@ export function AssortmentInsightPanel({
 
       setLastMode(mode)
       setCompletion('')
+      setSuggestResult(null)
       setError(null)
       setIsLoading(true)
+      setRejectingKey(null)
+
+      const feedbackArray = Object.entries(feedback).map(([key, entry]) => {
+        const suggestion = suggestResult?.suggestions.find((s) => s.key === key)
+        return {
+          key,
+          label: suggestion?.label ?? dimension.labels[key] ?? key,
+          suggestedValue: suggestion?.value ?? 0,
+          status: entry.status,
+          rationale: entry.rationale,
+        }
+      })
 
       const context: AssortmentMixContext = {
         season: seasonContext,
@@ -68,7 +111,11 @@ export function AssortmentInsightPanel({
           actuals: dimension.actuals,
           labels: dimension.labels,
         },
+        allDimensionTargets,
         summary,
+        brandBrief,
+        collectionBriefs,
+        feedback: feedbackArray.length > 0 ? feedbackArray : undefined,
       }
 
       try {
@@ -80,20 +127,23 @@ export function AssortmentInsightPanel({
         })
 
         if (!res.ok) {
-          throw new Error(await res.text() || `Request failed (${res.status})`)
+          throw new Error((await res.text()) || `Request failed (${res.status})`)
         }
 
-        const reader = res.body?.getReader()
-        if (!reader) throw new Error('No response stream')
-
-        const decoder = new TextDecoder()
-        let text = ''
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          text += decoder.decode(value, { stream: true })
-          setCompletion(text)
+        if (mode === 'suggest') {
+          const data = (await res.json()) as SuggestResponse
+          setSuggestResult(data)
+        } else {
+          const reader = res.body?.getReader()
+          if (!reader) throw new Error('No response stream')
+          const decoder = new TextDecoder()
+          let text = ''
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            text += decoder.decode(value, { stream: true })
+            setCompletion(text)
+          }
         }
       } catch (e) {
         if ((e as Error).name !== 'AbortError') {
@@ -103,12 +153,54 @@ export function AssortmentInsightPanel({
         setIsLoading(false)
       }
     },
-    [seasonContext, dimension, summary],
+    [seasonContext, dimension, summary, allDimensionTargets, brandBrief, collectionBriefs, feedback, suggestResult],
   )
 
-  const hasOutput = completion.length > 0
+  const handleAccept = useCallback((key: string) => {
+    setFeedback((prev) => ({ ...prev, [key]: { status: 'accepted' } }))
+    if (rejectingKey === key) setRejectingKey(null)
+  }, [rejectingKey])
 
-  // Idle state
+  const handleRejectStart = useCallback((key: string) => {
+    setRejectingKey(key)
+    setRejectRationale('')
+  }, [])
+
+  const handleRejectConfirm = useCallback((key: string) => {
+    setFeedback((prev) => ({
+      ...prev,
+      [key]: { status: 'rejected', rationale: rejectRationale.trim() || undefined },
+    }))
+    setRejectingKey(null)
+    setRejectRationale('')
+  }, [rejectRationale])
+
+  const handleRejectSkip = useCallback((key: string) => {
+    setFeedback((prev) => ({ ...prev, [key]: { status: 'rejected' } }))
+    setRejectingKey(null)
+    setRejectRationale('')
+  }, [])
+
+  const handleApply = useCallback(() => {
+    if (!suggestResult || !onApplySuggestions) return
+    const targets: Record<string, number> = {}
+    for (const s of suggestResult.suggestions) {
+      if (s.value > 0) targets[s.key] = s.value
+    }
+    onApplySuggestions(dimension.key, targets)
+  }, [suggestResult, onApplySuggestions, dimension.key])
+
+  const clearFeedbackForKey = useCallback((key: string) => {
+    setFeedback((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }, [])
+
+  const hasOutput = completion.length > 0 || suggestResult !== null
+
+  // ─── Idle state ────────────────────────────────────────────────────
   if (!hasOutput && !isLoading && !error) {
     return (
       <div className="border border-dashed border-[var(--depot-hairline)] rounded-md px-5 py-4 flex flex-col items-center justify-center text-center min-h-[120px] gap-3">
@@ -141,14 +233,17 @@ export function AssortmentInsightPanel({
     )
   }
 
-  // Error state
+  // ─── Error state ───────────────────────────────────────────────────
   if (error && !hasOutput) {
     return (
       <div className="border border-dashed border-red-200 rounded-md px-5 py-4 flex flex-col items-center justify-center text-center min-h-[120px] gap-2">
         <p className="text-[10px] text-red-500 leading-relaxed max-w-[220px]">{error}</p>
         <button
           type="button"
-          onClick={() => { setError(null); setLastMode(null) }}
+          onClick={() => {
+            setError(null)
+            setLastMode(null)
+          }}
           className="text-[10px] text-[var(--depot-muted)] hover:text-[var(--depot-ink)] transition-colors"
         >
           Dismiss
@@ -157,7 +252,7 @@ export function AssortmentInsightPanel({
     )
   }
 
-  // Streaming / complete state
+  // ─── Streaming / complete state ────────────────────────────────────
   return (
     <div className="border border-[var(--depot-hairline)] rounded-md flex flex-col min-h-[120px] overflow-hidden">
       {/* Header */}
@@ -169,6 +264,17 @@ export function AssortmentInsightPanel({
         <div className="flex items-center gap-1">
           {!isLoading && (
             <>
+              {lastMode === 'suggest' && suggestResult && onApplySuggestions && (
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.04em] rounded-sm bg-[var(--depot-ink)] text-white hover:bg-[var(--depot-ink-light)] transition-colors mr-1"
+                  title="Apply suggestions to Edit Targets dialog"
+                >
+                  <ArrowRight className="h-2.5 w-2.5" />
+                  Apply
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleRequest('suggest')}
@@ -201,10 +307,158 @@ export function AssortmentInsightPanel({
       {/* Body */}
       <div
         ref={scrollRef}
-        className="px-3 py-2.5 overflow-y-auto max-h-[260px] text-[11px] text-[var(--depot-ink-light)] leading-relaxed whitespace-pre-wrap"
+        className="px-3 py-2.5 overflow-y-auto max-h-[360px] min-h-0"
       >
-        {completion || (
-          <span className="text-[var(--depot-faint)] animate-pulse">Thinking…</span>
+        {isLoading && !hasOutput && (
+          <span className="text-[var(--depot-faint)] text-[11px] animate-pulse">Thinking…</span>
+        )}
+
+        {/* Structured suggest result */}
+        {lastMode === 'suggest' && suggestResult && (
+          <div className="space-y-2">
+            {suggestResult.summary && (
+              <p className="text-[11px] text-[var(--depot-ink-light)] leading-relaxed mb-3">
+                {suggestResult.summary}
+              </p>
+            )}
+            {suggestResult.suggestions.map((s) => {
+              const fb = feedback[s.key]
+              const isAccepted = fb?.status === 'accepted'
+              const isRejected = fb?.status === 'rejected'
+              const isExpanded = rejectingKey === s.key
+
+              return (
+                <div
+                  key={s.key}
+                  className={cn(
+                    'rounded-sm border px-2.5 py-2 transition-colors',
+                    isAccepted && 'border-emerald-200 bg-emerald-50/50',
+                    isRejected && 'border-zinc-200 bg-zinc-50/50 opacity-60',
+                    !fb && 'border-[var(--depot-hairline)]',
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className={cn(
+                          'text-[11px] font-medium',
+                          isRejected && 'line-through text-[var(--depot-faint)]',
+                        )}>
+                          {s.label}
+                        </span>
+                        <span className="text-[11px] tabular-nums text-[var(--depot-muted)]">
+                          {s.value} slots
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-[var(--depot-faint)] leading-relaxed mt-0.5">
+                        {s.rationale}
+                      </p>
+                      {isRejected && fb.rationale && (
+                        <p className="text-[10px] text-amber-600 mt-1 italic">
+                          Reason: {fb.rationale}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Accept/Reject buttons */}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {fb ? (
+                        <button
+                          type="button"
+                          onClick={() => clearFeedbackForKey(s.key)}
+                          className="p-1 text-[var(--depot-faint)] hover:text-[var(--depot-ink)] transition-colors"
+                          title="Clear feedback"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleAccept(s.key)}
+                            className="p-1 text-[var(--depot-faint)] hover:text-emerald-600 transition-colors"
+                            title="Accept this suggestion"
+                          >
+                            <Check className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectStart(s.key)}
+                            className="p-1 text-[var(--depot-faint)] hover:text-red-500 transition-colors"
+                            title="Reject this suggestion"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rejection rationale input */}
+                  {isExpanded && (
+                    <div className="mt-2 pt-2 border-t border-[var(--depot-hairline)]">
+                      <input
+                        type="text"
+                        value={rejectRationale}
+                        onChange={(e) => setRejectRationale(e.target.value)}
+                        placeholder="Why? (optional)"
+                        className="w-full text-[10px] px-2 py-1 rounded border border-[var(--depot-hairline)] bg-transparent text-[var(--depot-ink)] placeholder:text-[var(--depot-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--depot-ink)]"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRejectConfirm(s.key)
+                        }}
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleRejectConfirm(s.key)}
+                          className="text-[9px] uppercase tracking-wider font-medium text-[var(--depot-muted)] hover:text-[var(--depot-ink)] transition-colors"
+                        >
+                          {rejectRationale.trim() ? 'Reject with reason' : 'Reject'}
+                        </button>
+                        <span className="text-[var(--depot-hairline)]">·</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectSkip(s.key)}
+                          className="text-[9px] uppercase tracking-wider font-medium text-[var(--depot-faint)] hover:text-[var(--depot-muted)] transition-colors"
+                        >
+                          Skip reason
+                        </button>
+                        <span className="text-[var(--depot-hairline)]">·</span>
+                        <button
+                          type="button"
+                          onClick={() => setRejectingKey(null)}
+                          className="text-[9px] uppercase tracking-wider font-medium text-[var(--depot-faint)] hover:text-[var(--depot-muted)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {Object.keys(feedback).length > 0 && (
+              <p className="text-[9px] text-[var(--depot-faint)] mt-2 text-center">
+                Feedback will be included when you regenerate
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Plain text critique result */}
+        {lastMode === 'critique' && completion && (
+          <div className="text-[11px] text-[var(--depot-ink-light)] leading-relaxed whitespace-pre-wrap">
+            {completion}
+          </div>
+        )}
+
+        {/* Streaming critique */}
+        {isLoading && lastMode === 'critique' && completion && (
+          <div className="text-[11px] text-[var(--depot-ink-light)] leading-relaxed whitespace-pre-wrap">
+            {completion}
+          </div>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ import { PlanningTargetsPanel, type DimensionConfig } from './PlanningTargetsPan
 import { EditTargetsDialog, type EditTargetsTab, type DimensionOption } from './EditTargetsDialog'
 import { useDimensionFilter } from './DimensionFilterProvider'
 import type { AssortmentMixContext } from '@/lib/ai/types'
+import { InfoTooltip, type GlossaryEntry } from '@/components/InfoTooltip'
 
 // ─── Dimension key → dialog tab mapping ──────────────────────────────
 
@@ -48,8 +49,15 @@ interface AssortmentMixSectionProps {
   }
   /** Season metadata for AI insight panel */
   seasonContext?: AssortmentMixContext['season']
+  /** All dimension targets for cross-dimensional AI reasoning */
+  allDimensionTargets?: Record<string, Record<string, number>>
+  /** Brand brief for AI context */
+  brandBrief?: string | null
+  /** Collection briefs for AI context */
+  collectionBriefs?: Array<{ name: string; brief: string; slotCount: number }>
   /** Slot fill summary for AI insight panel */
   slotSummary?: AssortmentMixContext['summary']
+  glossary?: Record<string, GlossaryEntry>
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -70,11 +78,19 @@ export function AssortmentMixSection({
   currentAgeGroupTargets,
   dimensionOptions,
   seasonContext,
+  allDimensionTargets,
+  brandBrief,
+  collectionBriefs,
   slotSummary,
+  glossary,
 }: AssortmentMixSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogTab, setDialogTab] = useState<EditTargetsTab>('category')
   const [dialogFocus, setDialogFocus] = useState<EditTargetsTab | undefined>(undefined)
+  const [suggestedTargets, setSuggestedTargets] = useState<{
+    dimensionKey: EditTargetsTab
+    values: Record<string, number>
+  } | null>(null)
 
   const { filter, setFilter } = useDimensionFilter()
 
@@ -82,6 +98,7 @@ export function AssortmentMixSection({
   const openAll = useCallback(() => {
     setDialogTab('category')
     setDialogFocus(undefined)
+    setSuggestedTargets(null)
     setDialogOpen(true)
   }, [])
 
@@ -91,6 +108,7 @@ export function AssortmentMixSection({
       const tab = TAB_MAP[dimensionKey] ?? 'category'
       setDialogTab(tab)
       setDialogFocus(tab)
+      setSuggestedTargets(null)
       setDialogOpen(true)
     },
     [],
@@ -103,12 +121,32 @@ export function AssortmentMixSection({
     [setFilter],
   )
 
+  const handleApplySuggestions = useCallback(
+    (dimensionKey: string, targets: Record<string, number>) => {
+      const tab = TAB_MAP[dimensionKey] ?? 'category'
+      setSuggestedTargets({ dimensionKey: tab, values: targets })
+      setDialogTab(tab)
+      setDialogFocus(tab)
+      setDialogOpen(true)
+    },
+    [],
+  )
+
+  const handleDialogClose = useCallback(
+    (open: boolean) => {
+      setDialogOpen(open)
+      if (!open) setSuggestedTargets(null)
+    },
+    [],
+  )
+
   return (
     <>
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
-        <p className="depot-label" style={{ marginBottom: 0 }}>
+        <p className="depot-label flex items-center gap-1.5" style={{ marginBottom: 0 }}>
           Assortment Mix
+          <InfoTooltip slug="assortment-mix" glossary={glossary} />
         </p>
         <button
           type="button"
@@ -129,7 +167,11 @@ export function AssortmentMixSection({
         selectedFilter={filter}
         onFilterSelect={handleFilterSelect}
         seasonContext={seasonContext}
+        allDimensionTargets={allDimensionTargets}
+        brandBrief={brandBrief}
+        collectionBriefs={collectionBriefs}
         slotSummary={slotSummary}
+        onApplySuggestions={handleApplySuggestions}
       />
 
       {/* Single shared dialog instance */}
@@ -148,8 +190,9 @@ export function AssortmentMixSection({
         dimensionOptions={dimensionOptions}
         initialTab={dialogTab}
         focusedDimension={dialogFocus}
+        suggestedTargets={suggestedTargets}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogClose}
       />
     </>
   )

@@ -10,6 +10,7 @@ import {
   Tag,
   Package,
   Globe,
+  Sparkles,
 } from "lucide-react"
 
 // ─── Heading type ───────────────────────────────────────────────────
@@ -181,6 +182,20 @@ export const brandSections: BrandSection[] = [
       { id: "social-grid", text: "10.4 The Social Grid", level: 2 },
       { id: "email", text: "10.5 Email Marketing", level: 2 },
       { id: "homepage-hero", text: "Homepage Hero Reference", level: 2 },
+    ],
+  },
+  {
+    title: "AI Strategy Context",
+    href: "/internal/brand/strategy",
+    icon: Sparkles,
+    headings: [
+      { id: "positioning", text: "Positioning", level: 2 },
+      { id: "target-customer", text: "Target Customer", level: 2 },
+      { id: "price-architecture", text: "Price Architecture", level: 2 },
+      { id: "aesthetic-direction", text: "Aesthetic Direction", level: 2 },
+      { id: "category-strategy", text: "Category Strategy", level: 2 },
+      { id: "anti-spec", text: "Anti-Spec", level: 2 },
+      { id: "ai-brief", text: "AI Context Brief", level: 2 },
     ],
   },
 ]

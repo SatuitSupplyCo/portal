@@ -169,6 +169,10 @@ export async function createCollection(data: {
 export async function updateCollection(id: string, data: {
   name?: string;
   description?: string;
+  intent?: string;
+  designMandate?: string;
+  brandingMandate?: string;
+  systemRole?: string;
   status?: 'active' | 'deprecated';
   sortOrder?: number;
 }): Promise<ActionResult> {
@@ -176,7 +180,34 @@ export async function updateCollection(id: string, data: {
   await db.update(collections).set(data).where(eq(collections.id, id));
   revalidatePath('/internal/product/taxonomy');
   revalidatePath('/internal/product', 'layout');
+
+  const hasStrategyFields = data.intent !== undefined || data.designMandate !== undefined
+    || data.brandingMandate !== undefined || data.systemRole !== undefined;
+
+  if (hasStrategyFields) {
+    distillCollectionBrief(id).catch((e) =>
+      console.error('[distill] collection brief failed:', e),
+    );
+  }
+
   return { success: true };
+}
+
+async function distillCollectionBrief(collectionId: string) {
+  const { distillCollectionContext } = await import('@/lib/ai/distill');
+  const row = await db.query.collections.findFirst({
+    where: eq(collections.id, collectionId),
+    columns: { name: true, description: true, intent: true, designMandate: true, brandingMandate: true, systemRole: true },
+  });
+  if (!row) return;
+  const brief = await distillCollectionContext(row);
+  if (brief) {
+    await db.update(collections).set({
+      contextBrief: brief,
+      contextBriefUpdatedAt: new Date(),
+    }).where(eq(collections.id, collectionId));
+    revalidatePath('/internal/product/taxonomy');
+  }
 }
 
 // ─── Reorder (batch sortOrder update) ────────────────────────────────

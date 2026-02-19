@@ -57,6 +57,7 @@ import {
   seasonCoreRefs,
   seasonColors,
 } from './lifecycle';
+import { brandContext } from './brand';
 import { documentsAcl, packsAcl, assetsAcl } from './permissions';
 import {
   permissions,
@@ -827,6 +828,15 @@ export const resourceGrantsRelations = relations(
 export const rbacAuditLogRelations = relations(rbacAuditLog, ({ one }) => ({
   actor: one(users, {
     fields: [rbacAuditLog.actorUserId],
+    references: [users.id],
+  }),
+}));
+
+// ─── Brand Context ──────────────────────────────────────────────────
+
+export const brandContextRelations = relations(brandContext, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [brandContext.updatedBy],
     references: [users.id],
   }),
 }));
