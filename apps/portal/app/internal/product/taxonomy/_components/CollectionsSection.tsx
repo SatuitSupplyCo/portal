@@ -71,7 +71,9 @@ export function CollectionsSection({ collections }: { collections: Collection[] 
               </span>
             )}
             {col.contextBrief && (
-              <Sparkles className="h-3 w-3 text-muted-foreground/40" title="Has AI context brief" />
+              <span title="Has AI context brief">
+                <Sparkles className="h-3 w-3 text-muted-foreground/40" />
+              </span>
             )}
             {col.status !== 'active' && (
               <Badge variant="secondary" className="text-[10px]">
