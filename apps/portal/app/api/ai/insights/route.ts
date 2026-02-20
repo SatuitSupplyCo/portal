@@ -54,8 +54,8 @@ export async function POST(req: Request) {
       return Response.json({
         ...result.object,
         _usage: {
-          inputTokens: usage?.promptTokens ?? null,
-          outputTokens: usage?.completionTokens ?? null,
+          inputTokens: usage?.inputTokens ?? null,
+          outputTokens: usage?.outputTokens ?? null,
           latencyMs,
         },
       })
