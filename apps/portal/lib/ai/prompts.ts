@@ -6,7 +6,7 @@
  * from transport / UI concerns.
  */
 
-import type { AssortmentMixContext } from './types'
+import type { AssortmentMixContext, FieldSuggestionContext } from './types'
 
 // ─── System Prompt (shared across assortment features) ──────────────
 
@@ -160,6 +160,48 @@ Critique the current target mix for "${dimension.label}". Identify gaps, imbalan
   return { system: ASSORTMENT_SYSTEM, prompt }
 }
 
+// ─── Field Suggestion Prompts ────────────────────────────────────────
+
+const FIELD_SUGGESTION_SYSTEM = `You are a creative strategist for Satuit, a premium men's apparel brand.
+You help merchandisers craft compelling, concise text for planning fields — season descriptions, collection themes, product narratives, etc.
+
+Guidelines:
+- Write in a confident, editorial tone appropriate for an internal planning tool.
+- Be specific and evocative — avoid generic marketing language.
+- Each suggestion should take a distinct creative angle.
+- Keep suggestions concise (1–2 sentences max).`
+
+export function buildFieldSuggestionPrompt(
+  ctx: FieldSuggestionContext,
+): { system: string; prompt: string } {
+  const count = ctx.optionCount ?? 2
+  const brandBlock = ctx.brandBrief
+    ? `\nBrand context:\n${ctx.brandBrief}\n`
+    : ''
+
+  const formLines = Object.entries(ctx.formContext)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `  ${k}: ${v}`)
+    .join('\n')
+  const formBlock = formLines ? `\nForm values:\n${formLines}\n` : ''
+
+  const currentBlock = ctx.currentValue
+    ? `\nCurrent value: "${ctx.currentValue}"\n`
+    : ''
+
+  const rejectedBlock =
+    ctx.rejectedSuggestions && ctx.rejectedSuggestions.length > 0
+      ? `\nPreviously rejected suggestions (do NOT repeat these or closely similar ideas):\n${ctx.rejectedSuggestions.map((s) => `  - "${s}"`).join('\n')}\n`
+      : ''
+
+  const prompt = `${brandBlock}${formBlock}${currentBlock}${rejectedBlock}
+Generate exactly ${count} distinct suggestions for the "${ctx.fieldLabel}" field.
+Each suggestion should be a complete value ready to use in the form.
+Return each with a brief rationale explaining the creative angle.`
+
+  return { system: FIELD_SUGGESTION_SYSTEM, prompt }
+}
+
 // ─── Prompt Router ──────────────────────────────────────────────────
 
 export type PromptResult = { system: string; prompt: string }
@@ -179,6 +221,8 @@ export function buildPrompt(
         mode as 'suggest' | 'critique',
         context as AssortmentMixContext,
       )
+    case 'field-suggestion':
+      return buildFieldSuggestionPrompt(context as FieldSuggestionContext)
     default:
       throw new Error(`Unknown AI feature: ${feature}`)
   }

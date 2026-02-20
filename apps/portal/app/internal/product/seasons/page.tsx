@@ -34,20 +34,24 @@ export default async function SeasonsPage() {
       }
     : null
 
-  const allSeasons = await db.query.seasons.findMany({
-    with: {
-      slots: {
-        with: {
-          skuConcept: true,
+  const [allSeasons, brandContextRows] = await Promise.all([
+    db.query.seasons.findMany({
+      with: {
+        slots: {
+          with: {
+            skuConcept: true,
+          },
         },
+        coreRefs: {
+          with: { coreProgram: true },
+        },
+        colors: true,
       },
-      coreRefs: {
-        with: { coreProgram: true },
-      },
-      colors: true,
-    },
-    orderBy: (s, { asc }) => [asc(s.code)],
-  })
+      orderBy: (s, { asc }) => [asc(s.code)],
+    }),
+    db.query.brandContext.findMany({ limit: 1 }),
+  ])
+  const brandBrief = brandContextRows[0]?.contextBrief ?? null
 
   // Filter by resource grants for non-admin users
   const accessibleIds = user ? await getAccessibleResourceIds(user, 'season') : []
@@ -61,7 +65,7 @@ export default async function SeasonsPage() {
         <div className="depot-header">
           <div className="flex items-center justify-between">
             <h1 className="depot-heading text-xl">Seasons</h1>
-            <CreateSeasonDialog />
+            <CreateSeasonDialog brandBrief={brandBrief} />
           </div>
           <p className="mt-3 text-xs font-light text-[var(--depot-muted)] max-w-lg leading-relaxed tracking-wide">
             2 major seasons + 2 minor drops per year. Plan slots upfront, fill with concepts from Studio.

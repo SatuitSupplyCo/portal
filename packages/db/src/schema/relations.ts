@@ -58,6 +58,7 @@ import {
   seasonColors,
 } from './lifecycle';
 import { brandContext } from './brand';
+import { aiSuggestionLog } from './ai';
 import { documentsAcl, packsAcl, assetsAcl } from './permissions';
 import {
   permissions,
@@ -837,6 +838,15 @@ export const rbacAuditLogRelations = relations(rbacAuditLog, ({ one }) => ({
 export const brandContextRelations = relations(brandContext, ({ one }) => ({
   updatedByUser: one(users, {
     fields: [brandContext.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+// ─── AI Suggestion Log ─────────────────────────────────────────────
+
+export const aiSuggestionLogRelations = relations(aiSuggestionLog, ({ one }) => ({
+  user: one(users, {
+    fields: [aiSuggestionLog.userId],
     references: [users.id],
   }),
 }));

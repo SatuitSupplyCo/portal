@@ -70,7 +70,35 @@ export const suggestResponseSchema = z.object({
 
 export type SuggestResponse = z.infer<typeof suggestResponseSchema>
 
+// ─── Field Suggestion ───────────────────────────────────────────────
+
+export interface FieldSuggestionContext {
+  fieldName: string
+  fieldLabel: string
+  currentValue?: string
+  optionCount?: number
+  formContext: Record<string, unknown>
+  brandBrief?: string | null
+  rejectedSuggestions?: string[]
+}
+
+export interface FieldSuggestionRequest {
+  feature: 'field-suggestion'
+  mode: 'suggest'
+  context: FieldSuggestionContext
+}
+
+export const fieldSuggestResponseSchema = z.object({
+  suggestions: z.array(
+    z.object({
+      value: z.string(),
+      rationale: z.string(),
+    }),
+  ),
+})
+
+export type FieldSuggestResponse = z.infer<typeof fieldSuggestResponseSchema>
+
 // ─── Union ──────────────────────────────────────────────────────────
 
-export type InsightRequest = AssortmentMixInsightRequest
-// Future: | ColorStrategyInsightRequest | SlotGapInsightRequest | ...
+export type InsightRequest = AssortmentMixInsightRequest | FieldSuggestionRequest

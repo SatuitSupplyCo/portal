@@ -2,7 +2,7 @@ import { streamText, generateObject } from 'ai'
 import { auth } from '@repo/auth'
 import { insightModel } from '@/lib/ai/client'
 import { buildPrompt } from '@/lib/ai/prompts'
-import { suggestResponseSchema } from '@/lib/ai/types'
+import { suggestResponseSchema, fieldSuggestResponseSchema } from '@/lib/ai/types'
 
 export const maxDuration = 30
 
@@ -27,11 +27,17 @@ export async function POST(req: Request) {
     return new Response(message, { status: 400 })
   }
 
+  const startTime = Date.now()
+
   try {
     if (mode === 'suggest') {
+      const schema = feature === 'field-suggestion'
+        ? fieldSuggestResponseSchema
+        : suggestResponseSchema
+
       const result = await generateObject({
         model: insightModel,
-        schema: suggestResponseSchema,
+        schema,
         system: prompt.system,
         prompt: prompt.prompt,
         temperature: 0.4,
@@ -42,7 +48,17 @@ export async function POST(req: Request) {
         return new Response('Empty response from AI model', { status: 502 })
       }
 
-      return Response.json(result.object)
+      const latencyMs = Date.now() - startTime
+      const usage = result.usage
+
+      return Response.json({
+        ...result.object,
+        _usage: {
+          inputTokens: usage?.promptTokens ?? null,
+          outputTokens: usage?.completionTokens ?? null,
+          latencyMs,
+        },
+      })
     }
 
     const result = streamText({

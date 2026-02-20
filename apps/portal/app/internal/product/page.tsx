@@ -100,8 +100,12 @@ export default async function AssortmentDashboardPage({
   searchParams: Promise<{ season?: string }>
 }) {
   const { season: seasonCode } = await searchParams
-  const allSeasons = await getAllSeasonsData()
-  const allCorePrograms = await getActiveCorePrograms()
+  const [allSeasons, allCorePrograms, brandContextRows] = await Promise.all([
+    getAllSeasonsData(),
+    getActiveCorePrograms(),
+    db.query.brandContext.findMany({ limit: 1 }),
+  ])
+  const brandBrief = brandContextRows[0]?.contextBrief ?? null
 
   const selectedSeason = seasonCode
     ? allSeasons.find((s) => s.code === seasonCode.toUpperCase())
@@ -132,7 +136,7 @@ export default async function AssortmentDashboardPage({
             <h1 className="depot-heading text-xl">
               Assortment Dashboard
             </h1>
-            <CreateSeasonDialog />
+            <CreateSeasonDialog brandBrief={brandBrief} />
           </div>
           <p className="mt-3 text-xs font-light text-[var(--depot-muted)] max-w-lg leading-relaxed tracking-wide">
             Season-first planning. One concept = one SKU. No silent SKU creep.

@@ -50,6 +50,20 @@
       "when": 1771454400000,
       "tag": "0006_seed_glossary_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771532542708,
+      "tag": "0007_add_ai_suggestion_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771595059881,
+      "tag": "0008_add_ai_token_tracking",
+      "breakpoints": true
     }
   ]
 }

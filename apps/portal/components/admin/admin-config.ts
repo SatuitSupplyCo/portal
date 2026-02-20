@@ -3,6 +3,7 @@ import {
   Users,
   Building2,
   Shield,
+  Sparkles,
 } from "lucide-react"
 
 // ─── Section type ────────────────────────────────────────────────────
@@ -40,5 +41,11 @@ export const adminSections: AdminSection[] = [
     href: "/admin/orgs",
     icon: Building2,
     description: "Vendor and partner companies",
+  },
+  {
+    title: "AI",
+    href: "/admin/ai",
+    icon: Sparkles,
+    description: "AI usage, prompts, and suggestion logs",
   },
 ]

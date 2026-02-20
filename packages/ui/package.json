@@ -24,6 +24,7 @@
     "./tooltip": "./src/tooltip.tsx",
     "./scroll-area": "./src/scroll-area.tsx",
     "./sidebar": "./src/sidebar.tsx",
+    "./textarea": "./src/textarea.tsx",
     "./use-mobile": "./src/use-mobile.ts"
   },
   "peerDependencies": {
