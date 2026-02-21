@@ -214,10 +214,10 @@ export function SlotDetailPanel({ slot, colorOptions, editProps }: SlotDetailPan
             {concept.useCase && (
               <DetailRow label="Use Case">{concept.useCase.label}</DetailRow>
             )}
-            {snapshot?.description && (
+            {typeof snapshot?.description === 'string' && snapshot.description && (
               <div className="mt-3">
                 <p className="text-[10px] font-light text-[var(--depot-muted)] leading-relaxed tracking-wide">
-                  {snapshot.description as string}
+                  {snapshot.description}
                 </p>
               </div>
             )}
