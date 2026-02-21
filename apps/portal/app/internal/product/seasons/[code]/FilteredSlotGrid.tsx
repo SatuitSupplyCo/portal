@@ -1,8 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useDimensionFilter } from './DimensionFilterProvider'
+import { SlotDetailPanel } from './SlotDetailPanel'
+import { useShell } from '@/components/shell/ShellProvider'
+import type { TaxonomyCategory, TaxonomyDimension } from './AddSlotDialog'
+import type { ColorOption } from './SlotColorPicker'
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -73,10 +77,56 @@ interface FilteredSlotGridProps {
   slots: SlotGridEntry[]
   /** Label lookup for filter value display (all dimension labels) */
   allDimensionLabels: Record<string, Record<string, string>>
+  /** Color options for displaying colorway swatches in the detail panel */
+  colorOptions: ColorOption[]
+  /** Taxonomy props for the edit dialog — omit to disable editing */
+  editProps?: {
+    seasonName: string
+    productHierarchy: TaxonomyCategory[]
+    collections: TaxonomyDimension[]
+    constructions: TaxonomyDimension[]
+    weightClasses: TaxonomyDimension[]
+    fitBlocks: TaxonomyDimension[]
+    sizeScales: TaxonomyDimension[]
+    useCases: TaxonomyDimension[]
+    audienceGenders: TaxonomyDimension[]
+    audienceAgeGroups: TaxonomyDimension[]
+    sellingWindows: TaxonomyDimension[]
+    assortmentTenures: TaxonomyDimension[]
+    seasonColorIds: string[]
+    proposedColorIds: string[]
+    dimensionIdLookup: {
+      genders: Record<string, string>
+      ageGroups: Record<string, string>
+      sellingWindows: Record<string, string>
+      assortmentTenures: Record<string, string>
+      collections: Record<string, string>
+    }
+  }
 }
 
-export function FilteredSlotGrid({ slots, allDimensionLabels }: FilteredSlotGridProps) {
+export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, editProps }: FilteredSlotGridProps) {
   const { filter, filteredSlotIds } = useDimensionFilter()
+  const [selectedSlot, setSelectedSlot] = useState<SlotGridEntry | null>(null)
+  const { setRightRailContent, setRightRailOpen, rightRailOpen } = useShell()
+
+  const isOpen = rightRailOpen && selectedSlot !== null
+
+  const openSlotDetail = useCallback(
+    (slot: SlotGridEntry) => {
+      setSelectedSlot(slot)
+      setRightRailContent(
+        <SlotDetailPanel
+          key={slot.id}
+          slot={slot}
+          colorOptions={colorOptions}
+          editProps={editProps}
+        />,
+      )
+      setRightRailOpen(true)
+    },
+    [colorOptions, editProps, setRightRailContent, setRightRailOpen],
+  )
 
   const displaySlots = useMemo(() => {
     if (!filteredSlotIds) return slots
@@ -134,10 +184,13 @@ export function FilteredSlotGrid({ slots, allDimensionLabels }: FilteredSlotGrid
             const snapshot = concept?.metadataSnapshot
 
             return (
-              <div
+              <button
                 key={slot.id}
-                className="manifest-row"
+                type="button"
+                className="manifest-row w-full text-left"
                 style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
+                data-selected={selectedSlot?.id === slot.id && isOpen}
+                onClick={() => openSlotDetail(slot)}
               >
                 <span className="text-[11px] font-light text-[var(--depot-faint)] tabular-nums tracking-wider w-6">
                   {String(i + 1).padStart(2, '0')}
@@ -175,6 +228,7 @@ export function FilteredSlotGrid({ slots, allDimensionLabels }: FilteredSlotGrid
                     <Link
                       href={`/internal/product/concepts/${concept.id}`}
                       className="text-[11px] text-[var(--depot-ink)] underline-offset-2 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {(snapshot?.title as string) ?? 'Untitled Concept'}
                     </Link>
@@ -197,7 +251,7 @@ export function FilteredSlotGrid({ slots, allDimensionLabels }: FilteredSlotGrid
                     {slot.status}
                   </span>
                 </div>
-              </div>
+              </button>
             )
           })}
         </>

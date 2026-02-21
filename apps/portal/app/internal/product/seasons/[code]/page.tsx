@@ -747,6 +747,30 @@ export default async function SeasonDetailPage({
             <FilteredSlotGrid
               slots={slotGridEntries}
               allDimensionLabels={allDimensionLabels}
+              colorOptions={pickerOptions}
+              editProps={isPlanning ? {
+                seasonName: season.name,
+                productHierarchy,
+                collections: collectionsDimension,
+                constructions: constructionsDimension,
+                weightClasses: weightClassesDimension,
+                fitBlocks: fitBlocksDimension,
+                sizeScales: sizeScalesDimension,
+                useCases: useCasesDimension,
+                audienceGenders: gendersDimension,
+                audienceAgeGroups: ageGroupsDimension,
+                sellingWindows: sellingWindowsDimension,
+                assortmentTenures: assortmentTenuresDimension,
+                seasonColorIds: currentColorIds,
+                proposedColorIds: proposedForSeasonIds,
+                dimensionIdLookup: {
+                  genders: Object.fromEntries(taxonomyGenders.map(g => [g.code, g.id])),
+                  ageGroups: Object.fromEntries(taxonomyAgeGroups.map(a => [a.code, a.id])),
+                  sellingWindows: Object.fromEntries(taxonomySellingWindows.map(s => [s.code, s.id])),
+                  assortmentTenures: Object.fromEntries(taxonomyAssortmentTenures.map(a => [a.code, a.id])),
+                  collections: Object.fromEntries(taxonomyCollections.map(c => [c.code, c.id])),
+                },
+              } : undefined}
             />
           </section>
         </DimensionFilterProvider>

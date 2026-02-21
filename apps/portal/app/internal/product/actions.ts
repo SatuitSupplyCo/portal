@@ -396,19 +396,108 @@ export async function createSeasonSlot(
   const [slot] = await db.insert(seasonSlots).values({
     seasonId,
     productTypeId: data.productTypeId,
-    collectionId: data.collectionId ?? null,
+    collectionId: data.collectionId || null,
     audienceGenderId: data.audienceGenderId,
     audienceAgeGroupId: data.audienceAgeGroupId,
-    sellingWindowId: data.sellingWindowId ?? null,
-    assortmentTenureId: data.assortmentTenureId ?? null,
+    sellingWindowId: data.sellingWindowId || null,
+    assortmentTenureId: data.assortmentTenureId || null,
     colorwayIds: data.colorwayIds ?? [],
     replacementFlag: data.replacementFlag ?? false,
-    notes: data.notes,
+    notes: data.notes || null,
     createdBy: user.id,
   }).returning();
 
   revalidatePath('/internal/product');
   return { success: true, data: { slotId: slot!.id } };
+}
+
+export async function updateSeasonSlot(
+  slotId: string,
+  data: {
+    productTypeId: string;
+    collectionId?: string;
+    audienceGenderId: string;
+    audienceAgeGroupId: string;
+    sellingWindowId?: string;
+    assortmentTenureId?: string;
+    colorwayIds?: string[];
+    replacementFlag?: boolean;
+    notes?: string;
+  },
+): Promise<ActionResult> {
+  const user = await getSessionUser();
+  if (!hasPermission(user, 'slots.create')) {
+    return { success: false, error: 'Insufficient permissions.' };
+  }
+
+  const slot = await db.query.seasonSlots.findFirst({
+    where: eq(seasonSlots.id, slotId),
+  });
+  if (!slot) return { success: false, error: 'Slot not found.' };
+  if (slot.status !== 'open') {
+    return { success: false, error: 'Only open slots can be edited.' };
+  }
+
+  const season = await db.query.seasons.findFirst({
+    where: eq(seasons.id, slot.seasonId),
+  });
+  if (!season) return { success: false, error: 'Season not found.' };
+  if (season.status === 'locked' || season.status === 'closed') {
+    return { success: false, error: `Cannot edit slots in a ${season.status} season.` };
+  }
+
+  // Validate product type exists
+  const productType = await db.query.productTypes.findFirst({
+    where: eq(productTypes.id, data.productTypeId),
+    with: { subcategory: { with: { category: true } } },
+  });
+  if (!productType) return { success: false, error: 'Product type not found.' };
+
+  // Check minor season category rules if product type changed
+  if (season.seasonType === 'minor' && data.productTypeId !== slot.productTypeId) {
+    const existingSlots = await db.query.seasonSlots.findMany({
+      where: and(eq(seasonSlots.seasonId, slot.seasonId), eq(seasonSlots.status, 'open')),
+      with: { productType: { with: { subcategory: { with: { category: true } } } } },
+    });
+    const existingCategories = [
+      ...new Set(
+        existingSlots
+          .filter((s) => s.id !== slotId)
+          .map((s) => s.productType.subcategory.category.code),
+      ),
+    ];
+    const minorValidation = validateMinorSeasonRules(
+      {
+        seasonType: season.seasonType,
+        targetSkuCount: season.targetSkuCount,
+        minorMaxSkus: season.minorMaxSkus,
+        status: season.status,
+      },
+      productType.subcategory.category.code,
+      existingCategories,
+    );
+    if (!minorValidation.valid) {
+      return { success: false, error: minorValidation.errors.join(' ') };
+    }
+  }
+
+  await db
+    .update(seasonSlots)
+    .set({
+      productTypeId: data.productTypeId,
+      collectionId: data.collectionId || null,
+      audienceGenderId: data.audienceGenderId,
+      audienceAgeGroupId: data.audienceAgeGroupId,
+      sellingWindowId: data.sellingWindowId || null,
+      assortmentTenureId: data.assortmentTenureId || null,
+      colorwayIds: data.colorwayIds ?? [],
+      replacementFlag: data.replacementFlag ?? false,
+      notes: data.notes || null,
+    })
+    .where(eq(seasonSlots.id, slotId));
+
+  revalidatePath('/internal/product');
+  return { success: true };
 }
 
 export async function removeSeasonSlot(slotId: string): Promise<ActionResult> {
