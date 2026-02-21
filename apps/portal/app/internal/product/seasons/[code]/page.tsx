@@ -30,6 +30,7 @@ import { type SeasonColorEntry } from "./SeasonColorPalette"
 import { SeasonColorPicker } from "./SeasonColorPicker"
 import { DimensionFilterProvider, type SlotFilterDatum } from "./DimensionFilterProvider"
 import { FilteredSlotGrid, type SlotGridEntry } from "./FilteredSlotGrid"
+import { SeasonHeaderSwatches } from "./SeasonHeaderSwatches"
 import { InfoTooltip, type GlossaryEntry } from "@/components/InfoTooltip"
 import { glossaryTerms } from "@repo/db/schema"
 
@@ -513,36 +514,24 @@ export default async function SeasonDetailPage({
 
               {/* Color swatches */}
               {seasonColorData.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-0.5">
-                    {seasonColorData.slice(0, 12).map((color) => {
-                      const meta = color.studioEntry.categoryMetadata
-                      const hex = meta && typeof meta.hex === 'string' && /^#[0-9a-fA-F]{6}$/.test(meta.hex as string)
-                        ? (meta.hex as string)
-                        : null
-
-                      return (
-                        <div
-                          key={color.id}
-                          className="w-7 h-7 rounded-full border-2 border-white shadow-sm"
-                          style={{ backgroundColor: hex ?? '#e5e7eb' }}
-                          title={color.studioEntry.title}
-                        />
-                      )
-                    })}
-                    {seasonColorData.length > 12 && (
-                      <div className="w-7 h-7 rounded-full border-2 border-white shadow-sm bg-zinc-100 flex items-center justify-center">
-                        <span className="text-[8px] font-medium text-zinc-500">+{seasonColorData.length - 12}</span>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-[var(--depot-faint)] tracking-wide">
-                    {seasonColorData.length} color{seasonColorData.length !== 1 ? 's' : ''}
-                    {seasonColorData.filter(c => c.status === 'confirmed').length > 0 && (
-                      <> · {seasonColorData.filter(c => c.status === 'confirmed').length} confirmed</>
-                    )}
-                  </span>
-                </div>
+                <SeasonHeaderSwatches
+                  colors={seasonColorData.map((color) => {
+                    const meta = color.studioEntry.categoryMetadata
+                    const hex = meta && typeof meta.hex === 'string' && /^#[0-9a-fA-F]{6}$/.test(meta.hex as string)
+                      ? (meta.hex as string)
+                      : null
+                    const pantone = meta && typeof meta.pantone === 'string' ? (meta.pantone as string) : null
+                    return {
+                      id: color.id,
+                      studioEntryId: color.studioEntryId,
+                      status: color.status,
+                      title: color.studioEntry.title,
+                      hex,
+                      pantone,
+                      tags: color.studioEntry.tags,
+                    }
+                  })}
+                />
               )}
             </div>
 

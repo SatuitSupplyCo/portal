@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { Button } from '@repo/ui/button'
@@ -8,6 +8,8 @@ import type { SlotGridEntry } from './FilteredSlotGrid'
 import type { ColorOption } from './SlotColorPicker'
 import type { TaxonomyCategory, TaxonomyDimension } from './AddSlotDialog'
 import { EditSlotDialog } from './EditSlotDialog'
+import { ColorDetailDialog } from '@/components/ColorDetailDialog'
+import type { ColorDetailData } from '@/lib/color'
 
 const slotStatusColors: Record<string, string> = {
   open: 'bg-amber-100 text-amber-800',
@@ -67,8 +69,26 @@ interface SlotDetailPanelProps {
   }
 }
 
-export function SlotDetailPanel({ slot, colorOptions, editProps }: SlotDetailPanelProps) {
+export function SlotDetailPanel({ slot, colorOptions: propColorOptions, editProps }: SlotDetailPanelProps) {
+  const [colorOptions, setColorOptions] = useState(propColorOptions)
   const [editOpen, setEditOpen] = useState(false)
+  const [selectedColor, setSelectedColor] = useState<ColorDetailData | null>(null)
+
+  useEffect(() => { setColorOptions(propColorOptions) }, [propColorOptions])
+
+  const handleColorSaved = useCallback((updated: ColorDetailData) => {
+    setColorOptions(prev => prev.map(c => {
+      if (c.id !== updated.id) return c
+      return {
+        ...c,
+        title: updated.title,
+        hex: updated.hex,
+        pantone: updated.pantone,
+        tags: updated.tags ?? c.tags,
+      }
+    }))
+    setSelectedColor(updated)
+  }, [])
 
   const concept = slot.skuConcept
   const snapshot = concept?.metadataSnapshot
@@ -156,7 +176,20 @@ export function SlotDetailPanel({ slot, colorOptions, editProps }: SlotDetailPan
               </p>
               <div className="space-y-2">
                 {slotColors.map((color) => (
-                  <div key={color.id} className="flex items-center gap-2.5">
+                  <button
+                    key={color.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedColor({
+                        id: color.id,
+                        title: color.title,
+                        hex: color.hex,
+                        pantone: color.pantone,
+                        tags: color.tags,
+                      })
+                    }
+                    className="flex items-center gap-2.5 w-full text-left rounded-sm px-1 -mx-1 py-0.5 hover:bg-[var(--depot-hairline)] transition-colors cursor-pointer"
+                  >
                     <span
                       className="w-5 h-5 rounded-sm border border-[var(--depot-hairline)] shrink-0"
                       style={{ backgroundColor: color.hex ?? '#e5e7eb' }}
@@ -171,7 +204,7 @@ export function SlotDetailPanel({ slot, colorOptions, editProps }: SlotDetailPan
                         </span>
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -249,6 +282,14 @@ export function SlotDetailPanel({ slot, colorOptions, editProps }: SlotDetailPan
           onOpenChange={setEditOpen}
         />
       )}
+
+      {/* ─── Color Detail Dialog ──────────────────────────────── */}
+      <ColorDetailDialog
+        color={selectedColor}
+        open={!!selectedColor}
+        onOpenChange={(open) => { if (!open) setSelectedColor(null) }}
+        onColorSaved={handleColorSaved}
+      />
     </div>
   )
 }

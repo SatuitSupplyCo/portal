@@ -1,25 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@repo/ui/button'
 import { Check, Pencil } from 'lucide-react'
 import { confirmSeasonColor } from '../../actions'
+import { ColorDetailDialog } from '@/components/ColorDetailDialog'
+import {
+  getHex,
+  getPantone,
+  textColorForBg,
+  type ColorDetailData,
+  type SeasonColorEntry,
+} from '@/lib/color'
+
+export type { SeasonColorEntry }
 
 // ─── Types ───────────────────────────────────────────────────────────
-
-export interface SeasonColorEntry {
-  id: string
-  studioEntryId: string
-  status: 'confirmed' | 'proposed'
-  sortOrder: number
-  studioEntry: {
-    id: string
-    title: string
-    categoryMetadata: Record<string, unknown> | null
-    tags: string[] | null
-  }
-  skuCount: number
-}
 
 interface SeasonColorPaletteProps {
   seasonId: string
@@ -33,35 +29,51 @@ interface SeasonColorPaletteProps {
   filterNote?: string
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-function getHex(meta: Record<string, unknown> | null): string | null {
-  if (!meta) return null
-  const hex = meta.hex
-  return typeof hex === 'string' && /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : null
-}
-
-function getPantone(meta: Record<string, unknown> | null): string | null {
-  if (!meta) return null
-  const p = meta.pantone
-  return typeof p === 'string' && p.length > 0 ? p : null
-}
-
-function textColorForBg(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#000000' : '#ffffff'
-}
-
 // ─── Component ───────────────────────────────────────────────────────
 
-export function SeasonColorPalette({ seasonId, colors, totalConcepts, compact, onEdit, filterNote }: SeasonColorPaletteProps) {
+export function SeasonColorPalette({ seasonId, colors: propColors, totalConcepts, compact, onEdit, filterNote }: SeasonColorPaletteProps) {
+  const [colors, setColors] = useState(propColors)
+  const [selectedColor, setSelectedColor] = useState<ColorDetailData | null>(null)
+
+  useEffect(() => { setColors(propColors) }, [propColors])
+
+  const handleColorSaved = useCallback((updated: ColorDetailData) => {
+    setColors(prev => prev.map(c => {
+      if (c.studioEntry.id !== updated.id) return c
+      return {
+        ...c,
+        studioEntry: {
+          ...c.studioEntry,
+          title: updated.title,
+          categoryMetadata: {
+            ...(c.studioEntry.categoryMetadata ?? {}),
+            hex: updated.hex,
+            pantone: updated.pantone,
+          },
+          tags: updated.tags ?? c.studioEntry.tags,
+        },
+      }
+    }))
+    setSelectedColor(updated)
+  }, [])
+
   if (colors.length === 0) return null
 
   const confirmed = colors.filter((c) => c.status === 'confirmed')
   const proposed = colors.filter((c) => c.status === 'proposed')
   const totalSkuRefs = colors.reduce((sum, c) => sum + c.skuCount, 0)
+
+  function openColorDetail(color: SeasonColorEntry) {
+    const hex = getHex(color.studioEntry.categoryMetadata)
+    const pantone = getPantone(color.studioEntry.categoryMetadata)
+    setSelectedColor({
+      id: color.studioEntry.id,
+      title: color.studioEntry.title,
+      hex,
+      pantone,
+      tags: color.studioEntry.tags,
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -91,7 +103,7 @@ export function SeasonColorPalette({ seasonId, colors, totalConcepts, compact, o
       </div>
 
       {/* Weighted swatch bar */}
-      <WeightView colors={colors} totalConcepts={totalConcepts} totalSkuRefs={totalSkuRefs} />
+      <WeightView colors={colors} totalConcepts={totalConcepts} totalSkuRefs={totalSkuRefs} onColorClick={openColorDetail} />
 
       {/* Detail chips — hidden in compact mode (picker grid replaces them) */}
       {!compact && (
@@ -102,9 +114,11 @@ export function SeasonColorPalette({ seasonId, colors, totalConcepts, compact, o
             const isConfirmed = color.status === 'confirmed'
 
             return (
-              <div
+              <button
                 key={color.id}
-                className={`group flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
+                type="button"
+                onClick={() => openColorDetail(color)}
+                className={`group flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition-colors cursor-pointer text-left hover:border-[var(--depot-ink)]/40 ${
                   isConfirmed
                     ? 'border-[var(--depot-ink)]/20 bg-card'
                     : 'border-dashed border-[var(--depot-border)] bg-card/50'
@@ -125,18 +139,30 @@ export function SeasonColorPalette({ seasonId, colors, totalConcepts, compact, o
                 {isConfirmed ? (
                   <Check className="h-3 w-3 text-emerald-500 shrink-0" />
                 ) : (
-                  <ConfirmButton seasonId={seasonId} studioEntryId={color.studioEntryId} />
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0"
+                  >
+                    <ConfirmButton seasonId={seasonId} studioEntryId={color.studioEntryId} />
+                  </span>
                 )}
                 {color.skuCount > 0 && (
                   <span className="text-[9px] text-[var(--depot-faint)] tabular-nums shrink-0">
                     {color.skuCount} SKU{color.skuCount !== 1 ? 's' : ''}
                   </span>
                 )}
-              </div>
+              </button>
             )
           })}
         </div>
       )}
+
+      <ColorDetailDialog
+        color={selectedColor}
+        open={!!selectedColor}
+        onOpenChange={(open) => { if (!open) setSelectedColor(null) }}
+        onColorSaved={handleColorSaved}
+      />
     </div>
   )
 }
@@ -147,10 +173,12 @@ function WeightView({
   colors,
   totalConcepts,
   totalSkuRefs,
+  onColorClick,
 }: {
   colors: SeasonColorEntry[]
   totalConcepts: number
   totalSkuRefs: number
+  onColorClick?: (color: SeasonColorEntry) => void
 }) {
   const hasWeightData = totalSkuRefs > 0
 
@@ -168,29 +196,32 @@ function WeightView({
           const isProposed = color.status === 'proposed'
 
           return (
-            <div
+            <button
               key={color.id}
-              className="relative group/swatch transition-transform hover:scale-y-110 hover:z-10"
+              type="button"
+              onClick={() => onColorClick?.(color)}
+              className="relative group/swatch transition-transform hover:scale-y-110 hover:z-10 cursor-pointer"
               style={{
                 backgroundColor: hex ?? '#e5e7eb',
                 flex: `${weight} 0 0%`,
                 minWidth: '24px',
               }}
+              title={color.studioEntry.title}
             >
               {isProposed && (
-                <div className="absolute inset-0 opacity-30"
+                <div className="absolute inset-0 opacity-30 pointer-events-none"
                   style={{
                     backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.3) 3px, rgba(255,255,255,0.3) 6px)',
                   }}
                 />
               )}
               <span
-                className="absolute inset-x-0 bottom-0.5 text-[7px] font-mono text-center opacity-0 group-hover/swatch:opacity-100 transition-opacity"
+                className="absolute inset-x-0 bottom-0.5 text-[7px] font-mono text-center opacity-0 group-hover/swatch:opacity-100 transition-opacity pointer-events-none"
                 style={{ color: hex ? textColorForBg(hex) : '#666' }}
               >
                 {pct}%
               </span>
-            </div>
+            </button>
           )
         })}
       </div>

@@ -8,17 +8,9 @@ import { updateSeasonColors } from '../../actions'
 import { AddColorDialog } from '../../../studio/color/AddColorDialog'
 import { SeasonColorPalette, type SeasonColorEntry } from './SeasonColorPalette'
 import { useDimensionFilter } from './DimensionFilterProvider'
+import type { ColorOption } from '@/lib/color'
 
 // ─── Types ───────────────────────────────────────────────────────────
-
-interface ColorOption {
-  id: string
-  title: string
-  hex: string | null
-  pantone: string | null
-  tags: string[]
-  targetSeasonId: string | null
-}
 
 interface SeasonOption {
   id: string

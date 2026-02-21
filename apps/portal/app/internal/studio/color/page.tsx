@@ -16,6 +16,7 @@ import {
 import { Button } from "@repo/ui/button"
 import { AddColorDialog } from "./AddColorDialog"
 import { ColorExplorer } from "./ColorExplorer"
+import { StudioColorGrid } from "./StudioColorGrid"
 import { getSeasonOptions } from "../actions"
 
 // ─── Metadata ────────────────────────────────────────────────────────
@@ -152,96 +153,23 @@ export default async function StudioColorPage() {
         {/* Content */}
         {hasEntries ? (
           <div className="px-8 md:px-12 py-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {entries.map((entry) => {
+            <StudioColorGrid
+              entries={entries.map((entry) => {
                 const meta = entry.categoryMetadata as Record<string, unknown> | null
-                const hex = typeof meta?.hex === 'string' ? meta.hex : null
-                const pantone = typeof meta?.pantone === 'string' ? meta.pantone : null
-                const validHex = hex && /^#[0-9a-fA-F]{3,8}$/.test(hex) ? hex : null
-
-                return (
-                  <div
-                    key={entry.id}
-                    className="group rounded-lg border border-border bg-card hover:border-primary/40 transition-colors cursor-pointer overflow-hidden"
-                  >
-                    {/* Color swatch */}
-                    <div
-                      className="h-24 w-full"
-                      style={{ backgroundColor: validHex ?? '#e5e7eb' }}
-                    >
-                      {!validHex && (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Pipette className="h-6 w-6 text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {entry.title}
-                          </p>
-                          {entry.description && (
-                            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
-                              {entry.description}
-                            </p>
-                          )}
-                        </div>
-                        <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium ${statusColors[entry.status] ?? ''}`}>
-                          {statusLabels[entry.status] ?? entry.status}
-                        </span>
-                      </div>
-
-                      {/* Pantone / Hex codes */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {pantone && (
-                          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">
-                            {pantone}
-                          </span>
-                        )}
-                        {hex && (
-                          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded uppercase">
-                            {hex}
-                          </span>
-                        )}
-                        {entry.collectionRef && (
-                          <span className="text-[10px] text-muted-foreground capitalize">
-                            {entry.collectionRef.name}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Tags */}
-                      {entry.tags && (entry.tags as string[]).length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {(entry.tags as string[]).map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[9px] bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded-sm"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Footer */}
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                        <span>{entry.owner}</span>
-                        <span className="tabular-nums">
-                          {new Date(entry.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
+                return {
+                  id: entry.id,
+                  title: entry.title,
+                  description: entry.description,
+                  status: entry.status,
+                  tags: (entry.tags as string[]) ?? [],
+                  owner: entry.owner,
+                  createdAt: entry.createdAt.toISOString(),
+                  hex: typeof meta?.hex === 'string' ? meta.hex : null,
+                  pantone: typeof meta?.pantone === 'string' ? meta.pantone : null,
+                  collectionName: entry.collectionRef?.name ?? null,
+                }
               })}
-            </div>
+            />
           </div>
         ) : (
           <EmptyState seasons={seasons} collections={collectionOptions} />
