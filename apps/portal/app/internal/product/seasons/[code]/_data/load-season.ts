@@ -31,7 +31,7 @@ export type SlotWithTaxonomy = {
   id: string
   status: string
   colorwayIds: unknown
-  replacementFlag: boolean | null
+  replacementFlag: boolean
   audienceGender: { code: string; label: string } | null
   audienceAgeGroup: { code: string; label: string } | null
   sellingWindow: { code: string; label: string } | null
