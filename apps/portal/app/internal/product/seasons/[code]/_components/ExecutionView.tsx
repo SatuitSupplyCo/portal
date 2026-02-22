@@ -5,7 +5,7 @@ import type { GlossaryEntry } from "@/components/InfoTooltip"
 interface ExecutionViewProps {
   season: {
     targetSkuCount: number | null
-    marginTarget: unknown
+    marginTarget: number | null
   }
   filledSlotsCount: number
   openSlotsCount: number
