@@ -21,7 +21,7 @@ interface SeasonHeaderProps {
     minorMaxSkus?: number | null
     id: string
     targetSkuCount: number | null
-    marginTarget: unknown
+    marginTarget: string | null
     targetEvergreenPct: number | null
   }
   seasonColorData: SeasonColorEntry[]
@@ -129,7 +129,7 @@ export function SeasonHeader({
               openSlotCount={openSlotsCount}
               evergreenPct={evergreenPct}
               evergreenCount={evergreenCount}
-              targetSlotCount={season.targetSkuCount}
+              targetSlotCount={season.targetSkuCount ?? 0}
               marginTarget={season.marginTarget}
               targetEvergreenPct={season.targetEvergreenPct}
               glossary={glossary}

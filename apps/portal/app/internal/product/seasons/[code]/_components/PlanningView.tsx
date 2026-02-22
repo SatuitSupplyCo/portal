@@ -25,7 +25,7 @@ interface PlanningViewProps {
     type: string
     description: string | null
     launchDate: string | null
-    targetSlotCount: number | null
+    targetSlotCount: number
     marginTarget: number | null
     targetEvergreenPct: number | null
   }

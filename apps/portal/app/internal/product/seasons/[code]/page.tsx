@@ -128,7 +128,7 @@ export default async function SeasonDetailPage({
                 type: season.seasonType,
                 description: season.description ?? null,
                 launchDate: season.launchDate?.toISOString().split("T")[0] ?? null,
-                targetSlotCount: season.targetSkuCount,
+                targetSlotCount: season.targetSkuCount ?? 0,
                 marginTarget: season.marginTarget ? Number(season.marginTarget) : null,
                 targetEvergreenPct: season.targetEvergreenPct ?? null,
               }}
