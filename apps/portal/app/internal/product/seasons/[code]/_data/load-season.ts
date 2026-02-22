@@ -43,6 +43,8 @@ export type SlotWithTaxonomy = {
   }
   collection: { code: string; name: string } | null
   skuConcept: {
+    id: string
+    status: string
     materialWeightClass: { code: string; label: string } | null
     useCase: { code: string; label: string } | null
     construction: { code: string; label: string } | null
