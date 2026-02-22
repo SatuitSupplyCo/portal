@@ -36,23 +36,7 @@ const categoryMeta: Record<string, { icon: React.ComponentType<{ className?: str
   operational: { icon: Settings, color: "text-slate-600", bg: "bg-slate-50" },
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Archive className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">Archive is empty</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Where ideas go to die gracefully. Nothing disappears — it just stops
-        distracting you. Archived entries from all Studio categories will
-        appear here.
-      </p>
-    </div>
-  )
-}
+import { EmptyState } from "@/components/EmptyState"
 
 // ─── Table header ────────────────────────────────────────────────────
 
@@ -162,7 +146,11 @@ export default function StudioArchivePage() {
           <table className="w-full">
             <TableHeader />
           </table>
-          <EmptyState />
+          <EmptyState
+            icon={Archive}
+            title="Archive is empty"
+            description="Where ideas go to die gracefully. Nothing disappears — it just stops distracting you. Archived entries from all Studio categories will appear here."
+          />
         </div>
       </main>
     </DocPageShell>

@@ -1,47 +1,23 @@
 'use server';
 
-import { auth } from '@repo/auth';
 import { db } from '@repo/db/client';
 import {
   studioEntries,
   seasons,
-  users,
   seasonColors,
   seasonSlots,
   collections,
 } from '@repo/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { hasPermission, type SessionUser } from '@/lib/permissions';
+import { hasPermission } from '@/lib/permissions';
+import { getSessionUser } from '@/lib/session';
 
 type ActionResult = {
   success: boolean;
   error?: string;
   data?: Record<string, unknown>;
 };
-
-async function getSessionUser(): Promise<SessionUser> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-
-  const dbUser = await db.query.users.findFirst({
-    where: (u, { eq }) => eq(u.id, session.user.id),
-  });
-  if (!dbUser) {
-    throw new Error(
-      'Your session references a user that no longer exists in the database. Please sign out and sign back in.',
-    );
-  }
-
-  return {
-    id: session.user.id,
-    role: session.user.role,
-    permissions: session.user.permissions ?? [],
-    orgId: session.user.orgId,
-    name: dbUser.name,
-    email: dbUser.email,
-  };
-}
 
 export async function createStudioEntry(data: {
   title: string;

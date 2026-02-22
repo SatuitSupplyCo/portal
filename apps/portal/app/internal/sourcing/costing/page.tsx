@@ -57,24 +57,16 @@ const costingKpis = [
   },
 ]
 
-// ─── Empty state ─────────────────────────────────────────────────────
+import { EmptyState } from "@/components/EmptyState"
 
-function EmptyState() {
+function CostingEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-8">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mb-5">
-        <DollarSign className="h-7 w-7 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No costing profiles yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Create cost sheets per factory per category. Track FOB, landed costs,
-        and margin viability to protect brand economics.
-      </p>
+    <EmptyState icon={DollarSign} title="No costing profiles yet" description="Create cost sheets per factory per category. Track FOB, landed costs, and margin viability to protect brand economics." compact>
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Cost Sheet
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -188,7 +180,7 @@ export default function CostingPage() {
               </tr>
             </thead>
           </table>
-          <EmptyState />
+          <CostingEmptyState />
         </div>
 
         {/* Landed Cost Model */}

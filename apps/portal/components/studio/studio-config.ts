@@ -8,18 +8,9 @@ import {
   Archive,
 } from "lucide-react"
 
-// ─── Section type ────────────────────────────────────────────────────
+import type { SidebarSection } from "@/components/shell/SectionSidebar"
 
-export interface StudioSection {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  description?: string
-}
-
-// ─── All sections ────────────────────────────────────────────────────
-
-export const studioSections: StudioSection[] = [
+export const studioSections: SidebarSection[] = [
   {
     title: "Overview",
     href: "/internal/studio",

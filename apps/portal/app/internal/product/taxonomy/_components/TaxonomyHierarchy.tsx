@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -8,32 +8,25 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  type DragStartEvent,
-  type DragEndEvent,
-  type DragOverEvent,
-  type UniqueIdentifier,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { Button } from "@repo/ui/button"
+import { ChevronsUpDown } from "lucide-react"
+import { AddItemDialog } from "./AddItemDialog"
+import { EditNameDialog } from "./EditNameDialog"
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
+import { CategoryRow } from "./CategoryRow"
+import { SubcategoryRow } from "./SubcategoryRow"
+import { ProductTypeRow } from "./ProductTypeRow"
+import { DragOverlayRow } from "./DragOverlayRow"
 import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Badge } from '@repo/ui/badge'
-import { Button } from '@repo/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@repo/ui/dropdown-menu'
-import { cn } from '@repo/ui/utils'
-import { ChevronRight, ChevronDown, ChevronsUpDown, GripVertical, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { AddItemDialog } from './AddItemDialog'
-import { EditNameDialog } from './EditNameDialog'
-import { DeleteConfirmDialog } from './DeleteConfirmDialog'
+  prefixId,
+  parseId,
+  findItemByParsed,
+  type Category,
+  type ItemType,
+} from "./taxonomy-dnd-utils"
+import { useTaxonomyDnd, isDropTarget } from "./useTaxonomyDnd"
 import {
   createCategory,
   createSubcategory,
@@ -41,391 +34,26 @@ import {
   updateCategory,
   updateSubcategory,
   updateProductType,
-  reorderCategories,
-  reorderSubcategories,
-  reorderProductTypes,
-  moveSubcategory,
-  moveProductType,
   checkCategoryUsage,
   checkSubcategoryUsage,
   checkProductTypeUsage,
   deleteCategory,
   deleteSubcategory,
   deleteProductType,
-} from '../actions'
+} from "../actions"
 
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface ProductType {
-  id: string
-  code: string
-  name: string
-  status: string
-  sortOrder: number
-}
-
-interface Subcategory {
-  id: string
-  code: string
-  name: string
-  status: string
-  sortOrder: number
-  productTypes: ProductType[]
-}
-
-interface Category {
-  id: string
-  code: string
-  name: string
-  status: string
-  sortOrder: number
-  subcategories: Subcategory[]
-}
-
-// ─── ID helpers ─────────────────────────────────────────────────────
-
-type ItemType = 'category' | 'subcategory' | 'productType'
-
-function prefixId(type: ItemType, id: string): string {
-  if (type === 'category') return `cat-${id}`
-  if (type === 'subcategory') return `sub-${id}`
-  return `pt-${id}`
-}
-
-function parseId(prefixed: UniqueIdentifier): { type: ItemType; id: string } | null {
-  const str = String(prefixed)
-  if (str.startsWith('cat-')) return { type: 'category', id: str.slice(4) }
-  if (str.startsWith('sub-')) return { type: 'subcategory', id: str.slice(4) }
-  if (str.startsWith('pt-')) return { type: 'productType', id: str.slice(3) }
-  return null
-}
-
-// ─── Hierarchy lookup helpers ───────────────────────────────────────
-
-function findSubParent(hierarchy: Category[], subId: string): Category | undefined {
-  return hierarchy.find((cat) => cat.subcategories.some((s) => s.id === subId))
-}
-
-function findPtParent(
-  hierarchy: Category[],
-  ptId: string,
-): { cat: Category; sub: Subcategory } | undefined {
-  for (const cat of hierarchy) {
-    for (const sub of cat.subcategories) {
-      if (sub.productTypes.some((p) => p.id === ptId)) return { cat, sub }
-    }
-  }
-  return undefined
-}
-
-function findItemByParsed(
-  hierarchy: Category[],
-  parsed: { type: ItemType; id: string },
-): { name: string; code: string } | undefined {
-  if (parsed.type === 'category') {
-    return hierarchy.find((c) => c.id === parsed.id)
-  }
-  for (const cat of hierarchy) {
-    if (parsed.type === 'subcategory') {
-      const sub = cat.subcategories.find((s) => s.id === parsed.id)
-      if (sub) return sub
-    }
-    if (parsed.type === 'productType') {
-      for (const sub of cat.subcategories) {
-        const pt = sub.productTypes.find((p) => p.id === parsed.id)
-        if (pt) return pt
-      }
-    }
-  }
-  return undefined
-}
-
-// ─── Item Actions Menu ──────────────────────────────────────────────
-
-function ItemActionsMenu({
-  onRename,
-  onDelete,
-}: {
-  onRename: () => void
-  onDelete: () => void
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onClick={onRename}>
-          <Pencil className="h-3.5 w-3.5" />
-          Rename
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onDelete}>
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-// ─── Sortable Row: Category ─────────────────────────────────────────
-
-function SortableCategoryRow({
-  cat,
-  isExpanded,
-  isHighlighted,
-  isDragSource,
-  onToggle,
-  onRename,
-  onDelete,
-  children,
-}: {
-  cat: Category
-  isExpanded: boolean
-  isHighlighted: boolean
-  isDragSource: boolean
-  onToggle: () => void
-  onRename: () => void
-  onDelete: () => void
-  children: React.ReactNode
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: prefixId('category', cat.id),
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div
-        className={cn(
-          'group/row flex items-center gap-3 px-4 py-3 transition-colors',
-          isDragSource && 'opacity-30',
-          isHighlighted && !isDragSource && 'bg-accent/50 ring-1 ring-inset ring-primary/20',
-          !isDragSource && !isHighlighted && 'hover:bg-accent/50',
-        )}
-      >
-        <button
-          type="button"
-          className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="p-0.5 rounded hover:bg-accent"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
-        <span className="font-medium text-sm">{cat.name}</span>
-        <code className="text-xs text-muted-foreground font-mono">{cat.code}</code>
-        <StatusBadge status={cat.status} />
-        <span className="ml-auto text-xs text-muted-foreground">
-          {cat.subcategories.length} subcategories
-        </span>
-        <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
-      </div>
-      {isExpanded && children}
-    </div>
-  )
-}
-
-// ─── Sortable Row: Subcategory ──────────────────────────────────────
-
-function SortableSubcategoryRow({
-  sub,
-  isExpanded,
-  isHighlighted,
-  isDragSource,
-  onToggle,
-  onRename,
-  onDelete,
-  children,
-}: {
-  sub: Subcategory
-  isExpanded: boolean
-  isHighlighted: boolean
-  isDragSource: boolean
-  onToggle: () => void
-  onRename: () => void
-  onDelete: () => void
-  children: React.ReactNode
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: prefixId('subcategory', sub.id),
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div
-        className={cn(
-          'group/row flex items-center gap-3 px-4 py-2.5 pl-10 transition-colors',
-          isDragSource && 'opacity-30',
-          isHighlighted && !isDragSource && 'bg-accent/50 ring-1 ring-inset ring-primary/20',
-          !isDragSource && !isHighlighted && 'hover:bg-accent/30',
-        )}
-      >
-        <button
-          type="button"
-          className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="p-0.5 rounded hover:bg-accent"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
-        </button>
-        <span className="text-sm">{sub.name}</span>
-        <code className="text-xs text-muted-foreground font-mono">{sub.code}</code>
-        <StatusBadge status={sub.status} />
-        <span className="ml-auto text-xs text-muted-foreground">
-          {sub.productTypes.length} types
-        </span>
-        <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
-      </div>
-      {isExpanded && children}
-    </div>
-  )
-}
-
-// ─── Sortable Row: Product Type ─────────────────────────────────────
-
-function SortableProductTypeRow({
-  pt,
-  isHighlighted,
-  isDragSource,
-  onRename,
-  onDelete,
-}: {
-  pt: ProductType
-  isHighlighted: boolean
-  isDragSource: boolean
-  onRename: () => void
-  onDelete: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: prefixId('productType', pt.id),
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group/row flex items-center gap-3 px-4 py-2 pl-20 transition-colors',
-        isDragSource && 'opacity-30',
-        isHighlighted && !isDragSource && 'bg-accent/40',
-        !isDragSource && !isHighlighted && 'hover:bg-accent/20',
-      )}
-    >
-      <button
-        type="button"
-        className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-3 w-3" />
-      </button>
-      <span className="text-sm text-muted-foreground">{pt.name}</span>
-      <code className="text-xs text-muted-foreground/60 font-mono">{pt.code}</code>
-      <StatusBadge status={pt.status} />
-      <span className="ml-auto" />
-      <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
-    </div>
-  )
-}
-
-// ─── Drag Overlay ───────────────────────────────────────────────────
-
-function DragOverlayRow({
-  label,
-  code,
-  level,
-}: {
-  label: string
-  code: string
-  level: ItemType
-}) {
-  return (
-    <div
-      className={cn(
-        'flex items-center gap-3 rounded-lg border bg-card px-4 shadow-lg',
-        level === 'category' ? 'py-3' : 'py-2.5',
-      )}
-    >
-      <GripVertical className="h-4 w-4 text-muted-foreground/40" />
-      <span className={cn('text-sm', level === 'category' && 'font-medium')}>
-        {label}
-      </span>
-      <code className="text-xs text-muted-foreground font-mono">{code}</code>
-    </div>
-  )
-}
-
-// ─── Status Badge ───────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'active') return null
-  return (
-    <Badge variant="secondary" className="text-[10px]">
-      {status}
-    </Badge>
-  )
-}
+// Re-export types for backwards compatibility
+export type { Category, Subcategory, ProductType } from "./taxonomy-dnd-utils"
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function TaxonomyHierarchy({
-  hierarchy: initialHierarchy,
-}: {
-  hierarchy: Category[]
-}) {
+export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: Category[] }) {
   const [hierarchy, setHierarchy] = useState<Category[]>(initialHierarchy)
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const ids = new Set<string>()
     initialHierarchy.forEach((cat) => ids.add(cat.id))
     return ids
   })
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
-  const [overId, setOverId] = useState<UniqueIdentifier | null>(null)
-
-  // Edit/Delete dialog state
   const [renameTarget, setRenameTarget] = useState<{
     type: ItemType
     id: string
@@ -438,8 +66,11 @@ export function TaxonomyHierarchy({
   } | null>(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
+
+  const { activeId, overId, handleDragStart, handleDragOver, handleDragCancel, handleDragEnd } =
+    useTaxonomyDnd({ hierarchy, setHierarchy, setExpanded })
 
   const toggle = useCallback((id: string) => {
     setExpanded((prev) => {
@@ -450,10 +81,7 @@ export function TaxonomyHierarchy({
     })
   }, [])
 
-  const categoryOnlyIds = useMemo(
-    () => hierarchy.map((c) => c.id),
-    [hierarchy],
-  )
+  const categoryOnlyIds = useMemo(() => hierarchy.map((c) => c.id), [hierarchy])
 
   const allExpandableIds = useMemo(() => {
     const ids: string[] = []
@@ -466,30 +94,26 @@ export function TaxonomyHierarchy({
     return ids
   }, [hierarchy])
 
-  // Determine current depth: 0 = collapsed, 1 = categories, 2 = all
   const currentDepth = useMemo(() => {
     if (expanded.size === 0) return 0
     const allOpen = allExpandableIds.length > 0 && allExpandableIds.every((id) => expanded.has(id))
     if (allOpen) return 2
     const catsOnly = categoryOnlyIds.length > 0 && categoryOnlyIds.every((id) => expanded.has(id))
     const noSubs = hierarchy.every((cat) =>
-      cat.subcategories.every((sub) => !expanded.has(sub.id)),
+      cat.subcategories.every((sub) => !expanded.has(sub.id))
     )
     if (catsOnly && noSubs) return 1
-    return 1 // partial state → treat as depth 1
+    return 1
   }, [expanded, allExpandableIds, categoryOnlyIds, hierarchy])
 
-  const depthLabels = ['Expand Categories', 'Expand All', 'Collapse All'] as const
+  const depthLabels = ["Expand Categories", "Expand All", "Collapse All"] as const
 
   const cycleDepth = useCallback(() => {
     if (currentDepth === 0) {
-      // → depth 1: expand categories only
       setExpanded(new Set(categoryOnlyIds))
     } else if (currentDepth === 1) {
-      // → depth 2: expand everything
       setExpanded(new Set(allExpandableIds))
     } else {
-      // → depth 0: collapse all
       setExpanded(new Set())
     }
   }, [currentDepth, categoryOnlyIds, allExpandableIds])
@@ -498,234 +122,11 @@ export function TaxonomyHierarchy({
   const overParsed = overId ? parseId(overId) : null
 
   const categoryIds = useMemo(
-    () => hierarchy.map((c) => prefixId('category', c.id)),
-    [hierarchy],
+    () => hierarchy.map((c) => prefixId("category", c.id)),
+    [hierarchy]
   )
 
-  // ── Drag event handlers ───────────────────────────────────────────
-
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id)
-  }
-
-  function handleDragOver(event: DragOverEvent) {
-    setOverId(event.over?.id ?? null)
-  }
-
-  function handleDragCancel() {
-    setActiveId(null)
-    setOverId(null)
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setActiveId(null)
-    setOverId(null)
-
-    if (!over || active.id === over.id) return
-
-    const aParsed = parseId(active.id)
-    const oParsed = parseId(over.id)
-    if (!aParsed || !oParsed) return
-
-    // ── Category reorder ──
-    if (aParsed.type === 'category' && oParsed.type === 'category') {
-      const oldIdx = hierarchy.findIndex((c) => c.id === aParsed.id)
-      const newIdx = hierarchy.findIndex((c) => c.id === oParsed.id)
-      if (oldIdx === -1 || newIdx === -1) return
-
-      const reordered = arrayMove(hierarchy, oldIdx, newIdx)
-      setHierarchy(reordered)
-      reorderCategories(reordered.map((c) => c.id))
-      return
-    }
-
-    // ── Subcategory reorder / reclassify ──
-    if (aParsed.type === 'subcategory') {
-      const srcCat = findSubParent(hierarchy, aParsed.id)
-      if (!srcCat) return
-
-      if (oParsed.type === 'subcategory') {
-        const dstCat = findSubParent(hierarchy, oParsed.id)
-        if (!dstCat) return
-
-        if (srcCat.id === dstCat.id) {
-          // Same category → reorder
-          const subs = [...srcCat.subcategories]
-          const oldIdx = subs.findIndex((s) => s.id === aParsed.id)
-          const newIdx = subs.findIndex((s) => s.id === oParsed.id)
-          const reordered = arrayMove(subs, oldIdx, newIdx)
-
-          setHierarchy((prev) =>
-            prev.map((cat) =>
-              cat.id === srcCat.id ? { ...cat, subcategories: reordered } : cat,
-            ),
-          )
-          reorderSubcategories(srcCat.id, reordered.map((s) => s.id))
-        } else {
-          // Different category → reclassify
-          const movedSub = srcCat.subcategories.find((s) => s.id === aParsed.id)!
-          const insertIdx = dstCat.subcategories.findIndex((s) => s.id === oParsed.id)
-
-          setHierarchy((prev) =>
-            prev.map((cat) => {
-              if (cat.id === srcCat.id) {
-                return {
-                  ...cat,
-                  subcategories: cat.subcategories.filter((s) => s.id !== aParsed.id),
-                }
-              }
-              if (cat.id === dstCat.id) {
-                const newSubs = [...cat.subcategories]
-                newSubs.splice(insertIdx, 0, movedSub)
-                return { ...cat, subcategories: newSubs }
-              }
-              return cat
-            }),
-          )
-          moveSubcategory(aParsed.id, dstCat.id, insertIdx)
-        }
-        return
-      }
-
-      // Dropped on a category → move into it (append)
-      if (oParsed.type === 'category' && oParsed.id !== srcCat.id) {
-        const movedSub = srcCat.subcategories.find((s) => s.id === aParsed.id)!
-        const dstCat = hierarchy.find((c) => c.id === oParsed.id)!
-
-        setHierarchy((prev) =>
-          prev.map((cat) => {
-            if (cat.id === srcCat.id) {
-              return {
-                ...cat,
-                subcategories: cat.subcategories.filter((s) => s.id !== aParsed.id),
-              }
-            }
-            if (cat.id === oParsed.id) {
-              return { ...cat, subcategories: [...cat.subcategories, movedSub] }
-            }
-            return cat
-          }),
-        )
-        setExpanded((prev) => new Set(prev).add(oParsed.id))
-        moveSubcategory(aParsed.id, oParsed.id, dstCat.subcategories.length)
-        return
-      }
-    }
-
-    // ── Product type reorder / reclassify ──
-    if (aParsed.type === 'productType') {
-      const srcCtx = findPtParent(hierarchy, aParsed.id)
-      if (!srcCtx) return
-
-      if (oParsed.type === 'productType') {
-        const dstCtx = findPtParent(hierarchy, oParsed.id)
-        if (!dstCtx) return
-
-        if (srcCtx.sub.id === dstCtx.sub.id) {
-          // Same subcategory → reorder
-          const pts = [...srcCtx.sub.productTypes]
-          const oldIdx = pts.findIndex((p) => p.id === aParsed.id)
-          const newIdx = pts.findIndex((p) => p.id === oParsed.id)
-          const reordered = arrayMove(pts, oldIdx, newIdx)
-
-          setHierarchy((prev) =>
-            prev.map((cat) => ({
-              ...cat,
-              subcategories: cat.subcategories.map((sub) =>
-                sub.id === srcCtx.sub.id ? { ...sub, productTypes: reordered } : sub,
-              ),
-            })),
-          )
-          reorderProductTypes(srcCtx.sub.id, reordered.map((p) => p.id))
-        } else {
-          // Different subcategory → reclassify
-          const movedPt = srcCtx.sub.productTypes.find((p) => p.id === aParsed.id)!
-          const insertIdx = dstCtx.sub.productTypes.findIndex((p) => p.id === oParsed.id)
-
-          setHierarchy((prev) =>
-            prev.map((cat) => ({
-              ...cat,
-              subcategories: cat.subcategories.map((sub) => {
-                if (sub.id === srcCtx.sub.id) {
-                  return {
-                    ...sub,
-                    productTypes: sub.productTypes.filter((p) => p.id !== aParsed.id),
-                  }
-                }
-                if (sub.id === dstCtx.sub.id) {
-                  const newPts = [...sub.productTypes]
-                  newPts.splice(insertIdx, 0, movedPt)
-                  return { ...sub, productTypes: newPts }
-                }
-                return sub
-              }),
-            })),
-          )
-          moveProductType(aParsed.id, dstCtx.sub.id, insertIdx)
-        }
-        return
-      }
-
-      // Dropped on a subcategory → move into it (append)
-      if (oParsed.type === 'subcategory' && oParsed.id !== srcCtx.sub.id) {
-        const movedPt = srcCtx.sub.productTypes.find((p) => p.id === aParsed.id)!
-        const dstSub = hierarchy
-          .flatMap((c) => c.subcategories)
-          .find((s) => s.id === oParsed.id)!
-
-        setHierarchy((prev) =>
-          prev.map((cat) => ({
-            ...cat,
-            subcategories: cat.subcategories.map((sub) => {
-              if (sub.id === srcCtx.sub.id) {
-                return {
-                  ...sub,
-                  productTypes: sub.productTypes.filter((p) => p.id !== aParsed.id),
-                }
-              }
-              if (sub.id === oParsed.id) {
-                return { ...sub, productTypes: [...sub.productTypes, movedPt] }
-              }
-              return sub
-            }),
-          })),
-        )
-        setExpanded((prev) => new Set(prev).add(oParsed.id))
-        moveProductType(aParsed.id, oParsed.id, dstSub.productTypes.length)
-        return
-      }
-    }
-  }
-
-  // ── Resolve active item for DragOverlay ───────────────────────────
-
   const activeItem = activeParsed ? findItemByParsed(hierarchy, activeParsed) : null
-
-  // ── Highlight logic ───────────────────────────────────────────────
-  // Highlight a row when it's the current drop target AND it's a valid
-  // target for the item being dragged.
-
-  function isDropTarget(rowType: ItemType, rowId: string): boolean {
-    if (!activeParsed || !overParsed) return false
-    if (overParsed.type !== rowType || overParsed.id !== rowId) return false
-
-    // Categories highlight when reordering categories OR receiving subcategories
-    if (rowType === 'category') {
-      return activeParsed.type === 'category' || activeParsed.type === 'subcategory'
-    }
-    // Subcategories highlight when reordering subcategories OR receiving product types
-    if (rowType === 'subcategory') {
-      return activeParsed.type === 'subcategory' || activeParsed.type === 'productType'
-    }
-    // Product types highlight only for product type reorder
-    if (rowType === 'productType') {
-      return activeParsed.type === 'productType'
-    }
-    return false
-  }
-
-  // ── Render ────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -757,74 +158,75 @@ export function TaxonomyHierarchy({
         onDragCancel={handleDragCancel}
       >
         <div className="rounded-lg border bg-card shadow-sm divide-y">
-          <SortableContext
-            items={categoryIds}
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
             {hierarchy.map((cat) => {
               const catExpanded = expanded.has(cat.id)
-              const subIds = cat.subcategories.map((s) =>
-                prefixId('subcategory', s.id),
-              )
+              const subIds = cat.subcategories.map((s) => prefixId("subcategory", s.id))
 
               return (
-                <SortableCategoryRow
+                <CategoryRow
                   key={cat.id}
                   cat={cat}
                   isExpanded={catExpanded}
-                  isHighlighted={isDropTarget('category', cat.id)}
-                  isDragSource={
-                    activeParsed?.type === 'category' &&
-                    activeParsed.id === cat.id
-                  }
+                  isHighlighted={isDropTarget("category", cat.id, activeParsed, overParsed)}
+                  isDragSource={activeParsed?.type === "category" && activeParsed.id === cat.id}
                   onToggle={() => toggle(cat.id)}
-                  onRename={() => setRenameTarget({ type: 'category', id: cat.id, name: cat.name })}
-                  onDelete={() => setDeleteTarget({ type: 'category', id: cat.id, name: cat.name })}
+                  onRename={() => setRenameTarget({ type: "category", id: cat.id, name: cat.name })}
+                  onDelete={() => setDeleteTarget({ type: "category", id: cat.id, name: cat.name })}
                 >
                   <div className="bg-muted/30">
-                    <SortableContext
-                      items={subIds}
-                      strategy={verticalListSortingStrategy}
-                    >
+                    <SortableContext items={subIds} strategy={verticalListSortingStrategy}>
                       {cat.subcategories.map((sub) => {
                         const subExpanded = expanded.has(sub.id)
-                        const ptIds = sub.productTypes.map((p) =>
-                          prefixId('productType', p.id),
-                        )
+                        const ptIds = sub.productTypes.map((p) => prefixId("productType", p.id))
 
                         return (
-                          <SortableSubcategoryRow
+                          <SubcategoryRow
                             key={sub.id}
                             sub={sub}
                             isExpanded={subExpanded}
-                            isHighlighted={isDropTarget('subcategory', sub.id)}
+                            isHighlighted={isDropTarget("subcategory", sub.id, activeParsed, overParsed)}
                             isDragSource={
-                              activeParsed?.type === 'subcategory' &&
-                              activeParsed.id === sub.id
+                              activeParsed?.type === "subcategory" && activeParsed.id === sub.id
                             }
                             onToggle={() => toggle(sub.id)}
-                            onRename={() => setRenameTarget({ type: 'subcategory', id: sub.id, name: sub.name })}
-                            onDelete={() => setDeleteTarget({ type: 'subcategory', id: sub.id, name: sub.name })}
+                            onRename={() =>
+                              setRenameTarget({ type: "subcategory", id: sub.id, name: sub.name })
+                            }
+                            onDelete={() =>
+                              setDeleteTarget({ type: "subcategory", id: sub.id, name: sub.name })
+                            }
                           >
                             <div className="bg-muted/20">
-                              <SortableContext
-                                items={ptIds}
-                                strategy={verticalListSortingStrategy}
-                              >
+                              <SortableContext items={ptIds} strategy={verticalListSortingStrategy}>
                                 {sub.productTypes.map((pt) => (
-                                  <SortableProductTypeRow
+                                  <ProductTypeRow
                                     key={pt.id}
                                     pt={pt}
                                     isHighlighted={isDropTarget(
-                                      'productType',
+                                      "productType",
                                       pt.id,
+                                      activeParsed,
+                                      overParsed
                                     )}
                                     isDragSource={
-                                      activeParsed?.type === 'productType' &&
+                                      activeParsed?.type === "productType" &&
                                       activeParsed.id === pt.id
                                     }
-                                    onRename={() => setRenameTarget({ type: 'productType', id: pt.id, name: pt.name })}
-                                    onDelete={() => setDeleteTarget({ type: 'productType', id: pt.id, name: pt.name })}
+                                    onRename={() =>
+                                      setRenameTarget({
+                                        type: "productType",
+                                        id: pt.id,
+                                        name: pt.name,
+                                      })
+                                    }
+                                    onDelete={() =>
+                                      setDeleteTarget({
+                                        type: "productType",
+                                        id: pt.id,
+                                        name: pt.name,
+                                      })
+                                    }
                                   />
                                 ))}
                               </SortableContext>
@@ -851,7 +253,7 @@ export function TaxonomyHierarchy({
                                 />
                               </div>
                             </div>
-                          </SortableSubcategoryRow>
+                          </SubcategoryRow>
                         )
                       })}
                     </SortableContext>
@@ -878,7 +280,7 @@ export function TaxonomyHierarchy({
                       />
                     </div>
                   </div>
-                </SortableCategoryRow>
+                </CategoryRow>
               )
             })}
           </SortableContext>
@@ -904,12 +306,22 @@ export function TaxonomyHierarchy({
       {renameTarget && (
         <EditNameDialog
           open={!!renameTarget}
-          onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
-          title={`Rename ${renameTarget.type === 'category' ? 'Category' : renameTarget.type === 'subcategory' ? 'Subcategory' : 'Product Type'}`}
+          onOpenChange={(open) => {
+            if (!open) setRenameTarget(null)
+          }}
+          title={`Rename ${
+            renameTarget.type === "category"
+              ? "Category"
+              : renameTarget.type === "subcategory"
+                ? "Subcategory"
+                : "Product Type"
+          }`}
           currentName={renameTarget.name}
           onSave={async (newName) => {
-            if (renameTarget.type === 'category') return updateCategory(renameTarget.id, { name: newName })
-            if (renameTarget.type === 'subcategory') return updateSubcategory(renameTarget.id, { name: newName })
+            if (renameTarget.type === "category")
+              return updateCategory(renameTarget.id, { name: newName })
+            if (renameTarget.type === "subcategory")
+              return updateSubcategory(renameTarget.id, { name: newName })
             return updateProductType(renameTarget.id, { name: newName })
           }}
         />
@@ -918,16 +330,19 @@ export function TaxonomyHierarchy({
       {deleteTarget && (
         <DeleteConfirmDialog
           open={!!deleteTarget}
-          onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null)
+          }}
           itemName={deleteTarget.name}
           checkUsage={async () => {
-            if (deleteTarget.type === 'category') return checkCategoryUsage(deleteTarget.id)
-            if (deleteTarget.type === 'subcategory') return checkSubcategoryUsage(deleteTarget.id)
+            if (deleteTarget.type === "category") return checkCategoryUsage(deleteTarget.id)
+            if (deleteTarget.type === "subcategory")
+              return checkSubcategoryUsage(deleteTarget.id)
             return checkProductTypeUsage(deleteTarget.id)
           }}
           onDelete={async () => {
-            if (deleteTarget.type === 'category') return deleteCategory(deleteTarget.id)
-            if (deleteTarget.type === 'subcategory') return deleteSubcategory(deleteTarget.id)
+            if (deleteTarget.type === "category") return deleteCategory(deleteTarget.id)
+            if (deleteTarget.type === "subcategory") return deleteSubcategory(deleteTarget.id)
             return deleteProductType(deleteTarget.id)
           }}
         />

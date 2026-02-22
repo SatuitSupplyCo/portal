@@ -25,45 +25,25 @@ export const metadata: Metadata = {
   title: "Color Inspiration | Studio",
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
-
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  ready_for_review: "bg-amber-100 text-amber-800",
-  revisions_requested: "bg-red-100 text-red-700",
-  promoted: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
-
-const statusLabels: Record<string, string> = {
-  raw: "Raw",
-  exploring: "Exploring",
-  prototyping: "Prototyping",
-  ready_for_review: "In Review",
-  revisions_requested: "Revisions",
-  promoted: "Promoted",
-  archived: "Archived",
-}
+import { STUDIO_STATUS_COLORS as statusColors, STUDIO_STATUS_LABELS as statusLabels } from "@/lib/status"
 
 // ─── Empty state ─────────────────────────────────────────────────────
 
+import { EmptyState } from "@/components/EmptyState"
+
 type CollectionOption = { id: string; name: string }
 
-function EmptyState({ seasons, collections }: { seasons: { id: string; code: string; name: string }[]; collections: CollectionOption[] }) {
+function ColorEmptyState({ seasons, collections }: { seasons: { id: string; code: string; name: string }[]; collections: CollectionOption[] }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-pink-50 mb-6">
-        <Pipette className="h-8 w-8 text-pink-600" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No color inspiration yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Capture Pantone pulls, dye-lot photos, seasonal palette ideas, and color
-        direction references. These feed directly into seasonal color palette planning.
-      </p>
+    <EmptyState
+      icon={Pipette}
+      title="No color inspiration yet"
+      description="Capture Pantone pulls, dye-lot photos, seasonal palette ideas, and color direction references. These feed directly into seasonal color palette planning."
+      iconBgClass="bg-pink-50"
+      iconColorClass="text-pink-600"
+    >
       <AddColorDialog seasons={seasons} collections={collections} />
-    </div>
+    </EmptyState>
   )
 }
 
@@ -172,7 +152,7 @@ export default async function StudioColorPage() {
             />
           </div>
         ) : (
-          <EmptyState seasons={seasons} collections={collectionOptions} />
+          <ColorEmptyState seasons={seasons} collections={collectionOptions} />
         )}
       </main>
     </DocPageShell>

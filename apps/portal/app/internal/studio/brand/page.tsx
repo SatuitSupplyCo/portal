@@ -20,35 +20,24 @@ export const metadata: Metadata = {
   title: "Brand Aesthetic | Studio",
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
-
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  linked: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
+import { STUDIO_STATUS_COLORS as statusColors } from "@/lib/status"
 
 // ─── Empty state ─────────────────────────────────────────────────────
 
-function EmptyState() {
+import { EmptyState } from "@/components/EmptyState"
+
+function BrandEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Waves className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No brand inspiration yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Protect aesthetic discipline. Capture photography mood, texture
-        references (granite, rope, canvas, brass), color studies, and editorial
-        direction. This feeds Marketing, Packaging, and E-comm.
-      </p>
+    <EmptyState
+      icon={Waves}
+      title="No brand inspiration yet"
+      description="Protect aesthetic discipline. Capture photography mood, texture references (granite, rope, canvas, brass), color studies, and editorial direction. This feeds Marketing, Packaging, and E-comm."
+    >
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Inspiration
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -132,7 +121,7 @@ export default function StudioBrandPage() {
 
         {/* Grid view — image-forward (default for Brand) */}
         <div className="px-8 py-8 md:px-12">
-          <EmptyState />
+          <BrandEmptyState />
         </div>
       </main>
     </DocPageShell>

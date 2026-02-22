@@ -87,27 +87,7 @@ const categoryMeta: Record<
   },
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
-
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  ready_for_review: "bg-amber-100 text-amber-800",
-  revisions_requested: "bg-red-100 text-red-700",
-  promoted: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
-
-const statusLabels: Record<string, string> = {
-  raw: "Raw",
-  exploring: "Exploring",
-  prototyping: "Prototyping",
-  ready_for_review: "Ready for Review",
-  revisions_requested: "Revisions Requested",
-  promoted: "Promoted",
-  archived: "Archived",
-}
+import { STUDIO_STATUS_COLORS as statusColors, STUDIO_STATUS_LABELS as statusLabels } from "@/lib/status"
 
 // ─── Data fetching ──────────────────────────────────────────────────
 

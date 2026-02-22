@@ -21,35 +21,22 @@ export const metadata: Metadata = {
   title: "Materials Exploration | Studio",
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
+import { STUDIO_STATUS_COLORS as statusColors } from "@/lib/status"
 
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  linked: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
+import { EmptyState } from "@/components/EmptyState"
 
-// ─── Empty state ─────────────────────────────────────────────────────
-
-function EmptyState() {
+function MaterialsEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Scissors className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No materials captured yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Start with fabric-first thinking. Add swatches, mill references, weight
-        and composition data, hand-feel notes, and potential applications. This
-        connects directly to Sourcing once it becomes real.
-      </p>
+    <EmptyState
+      icon={Scissors}
+      title="No materials captured yet"
+      description="Start with fabric-first thinking. Add swatches, mill references, weight and composition data, hand-feel notes, and potential applications. This connects directly to Sourcing once it becomes real."
+    >
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Material
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -169,7 +156,7 @@ export default function StudioMaterialsPage() {
           <table className="w-full">
             <TableHeader />
           </table>
-          <EmptyState />
+          <MaterialsEmptyState />
         </div>
       </main>
     </DocPageShell>

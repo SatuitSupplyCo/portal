@@ -6,18 +6,9 @@ import {
   Sparkles,
 } from "lucide-react"
 
-// ─── Section type ────────────────────────────────────────────────────
+import type { SidebarSection } from "@/components/shell/SectionSidebar"
 
-export interface AdminSection {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  description?: string
-}
-
-// ─── All sections ────────────────────────────────────────────────────
-
-export const adminSections: AdminSection[] = [
+export const adminSections: SidebarSection[] = [
   {
     title: "Dashboard",
     href: "/admin",

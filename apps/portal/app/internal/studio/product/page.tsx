@@ -22,47 +22,24 @@ export const metadata: Metadata = {
   title: "Product Inspiration | Studio",
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
-
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  ready_for_review: "bg-amber-100 text-amber-800",
-  revisions_requested: "bg-red-100 text-red-700",
-  promoted: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
-
-const statusLabels: Record<string, string> = {
-  raw: "Raw",
-  exploring: "Exploring",
-  prototyping: "Prototyping",
-  ready_for_review: "In Review",
-  revisions_requested: "Revisions",
-  promoted: "Promoted",
-  archived: "Archived",
-}
+import { STUDIO_STATUS_COLORS as statusColors, STUDIO_STATUS_LABELS as statusLabels } from "@/lib/status"
 
 // ─── Empty state ─────────────────────────────────────────────────────
 
-function EmptyState() {
+import { EmptyState } from "@/components/EmptyState"
+
+function ProductEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Shirt className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No product inspiration yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Start capturing silhouette observations, construction details, fit
-        direction, and reference garments. This feeds Assortment later — but
-        doesn&apos;t pollute it.
-      </p>
+    <EmptyState
+      icon={Shirt}
+      title="No product inspiration yet"
+      description="Start capturing silhouette observations, construction details, fit direction, and reference garments. This feeds Assortment later — but doesn't pollute it."
+    >
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Inspiration
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -242,7 +219,7 @@ export default async function StudioProductPage() {
             </table>
           </div>
         ) : (
-          <EmptyState />
+          <ProductEmptyState />
         )}
       </main>
     </DocPageShell>

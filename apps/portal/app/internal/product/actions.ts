@@ -8,7 +8,6 @@
  * and sourcing record linking.
  */
 
-import { auth } from '@repo/auth';
 import { db } from '@repo/db/client';
 import {
   studioEntries,
@@ -26,7 +25,7 @@ import {
 } from '@repo/db/schema';
 import { eq, and, count, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { hasPermission, hasResourceAccess, type SessionUser } from '@/lib/permissions';
+import { hasPermission, hasResourceAccess } from '@/lib/permissions';
 import {
   validateReadyForReview,
   validateConceptTransition,
@@ -34,19 +33,7 @@ import {
   validateMinorSeasonRules,
   getNextConceptStatus,
 } from '@/lib/lifecycle-rules';
-
-// ─── Helpers ────────────────────────────────────────────────────────
-
-async function getSessionUser(): Promise<SessionUser> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Not authenticated');
-  return {
-    id: session.user.id,
-    role: session.user.role,
-    permissions: session.user.permissions ?? [],
-    orgId: session.user.orgId,
-  };
-}
+import { getSessionUser } from '@/lib/session';
 
 type ActionResult = { success: true; data?: unknown } | { success: false; error: string };
 

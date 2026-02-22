@@ -67,24 +67,16 @@ const productionKpis = [
   },
 ]
 
-// ─── Empty state ─────────────────────────────────────────────────────
+import { EmptyState } from "@/components/EmptyState"
 
-function EmptyState() {
+function ProductionEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-8">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mb-5">
-        <Truck className="h-7 w-7 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No production runs yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Track POs, production timelines, QC results, and delivery performance.
-        This is how you decide: strategic partner vs backup only.
-      </p>
+    <EmptyState icon={Truck} title="No production runs yet" description="Track POs, production timelines, QC results, and delivery performance. This is how you decide: strategic partner vs backup only." compact>
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Production Run
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -218,7 +210,7 @@ export default function ProductionPage() {
               </tr>
             </thead>
           </table>
-          <EmptyState />
+          <ProductionEmptyState />
         </div>
 
         {/* Performance KPIs reference */}

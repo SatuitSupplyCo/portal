@@ -21,35 +21,22 @@ export const metadata: Metadata = {
   title: "References & Scanning | Studio",
 }
 
-// ─── Status badge colors ─────────────────────────────────────────────
+import { STUDIO_STATUS_COLORS as statusColors } from "@/lib/status"
 
-const statusColors: Record<string, string> = {
-  raw: "bg-slate-100 text-slate-700",
-  exploring: "bg-blue-100 text-blue-800",
-  prototyping: "bg-violet-100 text-violet-800",
-  linked: "bg-emerald-100 text-emerald-800",
-  archived: "bg-gray-100 text-gray-500",
-}
+import { EmptyState } from "@/components/EmptyState"
 
-// ─── Empty state ─────────────────────────────────────────────────────
-
-function EmptyState() {
+function ReferencesEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-8">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <BookMarked className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-lg font-semibold mb-2">No references captured yet</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-        Keep your thinking sharp without copying. Capture garment teardown
-        photos, competitor pricing observations, fit commentary, and honest
-        &quot;what works / what feels wrong&quot; assessments.
-      </p>
+    <EmptyState
+      icon={BookMarked}
+      title="No references captured yet"
+      description='Keep your thinking sharp without copying. Capture garment teardown photos, competitor pricing observations, fit commentary, and honest "what works / what feels wrong" assessments.'
+    >
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         Add Reference
       </Button>
-    </div>
+    </EmptyState>
   )
 }
 
@@ -173,7 +160,7 @@ export default function StudioReferencesPage() {
           <table className="w-full">
             <TableHeader />
           </table>
-          <EmptyState />
+          <ReferencesEmptyState />
         </div>
       </main>
     </DocPageShell>

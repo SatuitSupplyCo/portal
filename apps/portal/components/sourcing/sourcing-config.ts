@@ -9,18 +9,9 @@ import {
   BarChart3,
 } from "lucide-react"
 
-// ─── Section type ────────────────────────────────────────────────────
+import type { SidebarSection } from "@/components/shell/SectionSidebar"
 
-export interface SourcingSection {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  description?: string
-}
-
-// ─── All sections ────────────────────────────────────────────────────
-
-export const sourcingSections: SourcingSection[] = [
+export const sourcingSections: SidebarSection[] = [
   {
     title: "Overview",
     href: "/internal/sourcing",

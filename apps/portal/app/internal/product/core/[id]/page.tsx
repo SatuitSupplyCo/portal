@@ -20,13 +20,7 @@ export async function generateMetadata({
   return { title: `${program?.name ?? 'Core Program'} | Satuit Supply Co.` }
 }
 
-// ─── Status styling ─────────────────────────────────────────────────
-
-const statusColors: Record<string, string> = {
-  active: "bg-emerald-100 text-emerald-800",
-  paused: "bg-amber-100 text-amber-800",
-  retired: "bg-zinc-100 text-zinc-400",
-}
+import { CORE_PROGRAM_STATUS_COLORS as statusColors } from "@/lib/status"
 
 // ─── Page ────────────────────────────────────────────────────────────
 
