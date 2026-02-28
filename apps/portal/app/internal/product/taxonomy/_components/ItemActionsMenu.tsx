@@ -7,14 +7,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { ImageUp, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 interface ItemActionsMenuProps {
   onRename: () => void
   onDelete: () => void
+  onUploadFlats?: () => void
 }
 
-export function ItemActionsMenu({ onRename, onDelete }: ItemActionsMenuProps) {
+export function ItemActionsMenu({ onRename, onDelete, onUploadFlats }: ItemActionsMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -27,6 +28,13 @@ export function ItemActionsMenu({ onRename, onDelete }: ItemActionsMenuProps) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
+        {onUploadFlats && (
+          <DropdownMenuItem onClick={onUploadFlats}>
+            <ImageUp className="h-3.5 w-3.5" />
+            Upload Flats
+          </DropdownMenuItem>
+        )}
+        {onUploadFlats && <DropdownMenuSeparator />}
         <DropdownMenuItem onClick={onRename}>
           <Pencil className="h-3.5 w-3.5" />
           Rename

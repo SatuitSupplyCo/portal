@@ -15,6 +15,7 @@ import { ChevronsUpDown } from "lucide-react"
 import { AddItemDialog } from "./AddItemDialog"
 import { EditNameDialog } from "./EditNameDialog"
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
+import { ProductTypeDetailDialog } from "./ProductTypeDetailDialog"
 import { CategoryRow } from "./CategoryRow"
 import { SubcategoryRow } from "./SubcategoryRow"
 import { ProductTypeRow } from "./ProductTypeRow"
@@ -40,6 +41,7 @@ import {
   deleteCategory,
   deleteSubcategory,
   deleteProductType,
+  uploadProductTypeFlats,
 } from "../actions"
 
 // Re-export types for backwards compatibility
@@ -48,6 +50,7 @@ export type { Category, Subcategory, ProductType } from "./taxonomy-dnd-utils"
 // ─── Main Component ─────────────────────────────────────────────────
 
 export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: Category[] }) {
+  const [mounted, setMounted] = useState(false)
   const [hierarchy, setHierarchy] = useState<Category[]>(initialHierarchy)
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const ids = new Set<string>()
@@ -64,10 +67,23 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
     id: string
     name: string
   } | null>(null)
+  const [detailTarget, setDetailTarget] = useState<{
+    id: string
+    code: string
+    name: string
+    status: string
+    sortOrder: number
+    categoryName: string
+    subcategoryName: string
+  } | null>(null)
 
   useEffect(() => {
     setHierarchy(initialHierarchy)
   }, [initialHierarchy])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -131,6 +147,14 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
   )
 
   const activeItem = activeParsed ? findItemByParsed(hierarchy, activeParsed) : null
+
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+        Loading taxonomy hierarchy...
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -217,11 +241,26 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
                                       activeParsed?.type === "productType" &&
                                       activeParsed.id === pt.id
                                     }
-                                    onRename={() =>
-                                      setRenameTarget({
-                                        type: "productType",
+                                    onOpenDetail={() =>
+                                      setDetailTarget({
                                         id: pt.id,
+                                        code: pt.code,
                                         name: pt.name,
+                                        status: pt.status,
+                                        sortOrder: pt.sortOrder,
+                                        categoryName: cat.name,
+                                        subcategoryName: sub.name,
+                                      })
+                                    }
+                                    onRename={() =>
+                                      setDetailTarget({
+                                        id: pt.id,
+                                        code: pt.code,
+                                        name: pt.name,
+                                        status: pt.status,
+                                        sortOrder: pt.sortOrder,
+                                        categoryName: cat.name,
+                                        subcategoryName: sub.name,
                                       })
                                     }
                                     onDelete={() =>
@@ -229,6 +268,17 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
                                         type: "productType",
                                         id: pt.id,
                                         name: pt.name,
+                                      })
+                                    }
+                                    onUploadFlats={() =>
+                                      setDetailTarget({
+                                        id: pt.id,
+                                        code: pt.code,
+                                        name: pt.name,
+                                        status: pt.status,
+                                        sortOrder: pt.sortOrder,
+                                        categoryName: cat.name,
+                                        subcategoryName: sub.name,
                                       })
                                     }
                                   />
@@ -349,6 +399,18 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
             if (deleteTarget.type === "subcategory") return deleteSubcategory(deleteTarget.id)
             return deleteProductType(deleteTarget.id)
           }}
+        />
+      )}
+
+      {detailTarget && (
+        <ProductTypeDetailDialog
+          open={!!detailTarget}
+          onOpenChange={(open) => {
+            if (!open) setDetailTarget(null)
+          }}
+          productType={detailTarget}
+          onSave={async (id, data) => updateProductType(id, data)}
+          onUploadFlats={async (formData) => uploadProductTypeFlats(formData)}
         />
       )}
     </div>

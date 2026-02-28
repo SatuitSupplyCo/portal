@@ -12,16 +12,20 @@ interface ProductTypeRowProps {
   pt: ProductType
   isHighlighted: boolean
   isDragSource: boolean
+  onOpenDetail: () => void
   onRename: () => void
   onDelete: () => void
+  onUploadFlats: () => void
 }
 
 export function ProductTypeRow({
   pt,
   isHighlighted,
   isDragSource,
+  onOpenDetail,
   onRename,
   onDelete,
+  onUploadFlats,
 }: ProductTypeRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: prefixId("productType", pt.id),
@@ -37,11 +41,12 @@ export function ProductTypeRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group/row flex items-center gap-3 px-4 py-2 pl-20 transition-colors",
+        "group/row flex items-center gap-3 px-4 py-2 pl-20 transition-colors cursor-pointer",
         isDragSource && "opacity-30",
         isHighlighted && !isDragSource && "bg-accent/40",
         !isDragSource && !isHighlighted && "hover:bg-accent/20"
       )}
+      onClick={onOpenDetail}
     >
       <button
         type="button"
@@ -55,7 +60,11 @@ export function ProductTypeRow({
       <code className="text-xs text-muted-foreground/60 font-mono">{pt.code}</code>
       <StatusBadge status={pt.status} />
       <span className="ml-auto" />
-      <ItemActionsMenu onRename={onRename} onDelete={onDelete} />
+      <ItemActionsMenu
+        onRename={onRename}
+        onDelete={onDelete}
+        onUploadFlats={onUploadFlats}
+      />
     </div>
   )
 }

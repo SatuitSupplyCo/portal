@@ -24,6 +24,7 @@ import type { DimensionConfig } from "../PlanningTargetsPanel"
 import type { SeasonColorEntry } from "../SeasonColorPalette"
 import type { SlotFilterDatum } from "../DimensionFilterProvider"
 import type { SlotGridEntry } from "../FilteredSlotGrid"
+import { getDefaultTechFlatsForProductType } from "@/lib/content/default-tech-flats"
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -400,6 +401,26 @@ async function loadSeasonInternal(code: string) {
   }))
 
   const slotGridEntries: SlotGridEntry[] = activeSlots.map((slot) => ({
+    frontFlat:
+      (() => {
+        const snapshot = (slot.skuConcept?.metadataSnapshot as Record<string, unknown> | undefined) ?? {}
+        const techFlats = snapshot.techFlats as { front?: unknown; back?: unknown } | undefined
+        const defaults = getDefaultTechFlatsForProductType(slot.productType.code)
+        if (typeof techFlats?.front === "string" && techFlats.front.length > 0) {
+          return techFlats.front
+        }
+        return defaults.front
+      })(),
+    backFlat:
+      (() => {
+        const snapshot = (slot.skuConcept?.metadataSnapshot as Record<string, unknown> | undefined) ?? {}
+        const techFlats = snapshot.techFlats as { front?: unknown; back?: unknown } | undefined
+        const defaults = getDefaultTechFlatsForProductType(slot.productType.code)
+        if (typeof techFlats?.back === "string" && techFlats.back.length > 0) {
+          return techFlats.back
+        }
+        return defaults.back
+      })(),
     id: slot.id,
     status: slot.status,
     replacementFlag: slot.replacementFlag,

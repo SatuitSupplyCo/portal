@@ -26,6 +26,7 @@ import {
 import { eq, and, count, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { hasPermission, hasResourceAccess } from '@/lib/permissions';
+import { getDefaultTechFlatsForProductType } from '@/lib/content/default-tech-flats';
 import {
   validateReadyForReview,
   validateConceptTransition,
@@ -130,6 +131,9 @@ export async function promoteToConcept(
 
   const slot = await db.query.seasonSlots.findFirst({
     where: eq(seasonSlots.id, seasonSlotId),
+    with: {
+      productType: true,
+    },
   });
   if (!slot) return { success: false, error: 'Season slot not found.' };
   if (slot.status !== 'open') {
@@ -138,6 +142,8 @@ export async function promoteToConcept(
   if (!slot.collectionId) {
     return { success: false, error: 'Slot must have a collection assigned before it can be filled.' };
   }
+
+  const techFlats = getDefaultTechFlatsForProductType(slot.productType.code);
 
   // Snapshot structured data at promotion time
   const metadataSnapshot = {
@@ -154,6 +160,8 @@ export async function promoteToConcept(
     replacementVsAdditive: entry.replacementVsAdditive,
     tags: entry.tags,
     categoryMetadata: entry.categoryMetadata,
+    productTypeCode: slot.productType.code,
+    techFlats,
   };
 
   // Create concept

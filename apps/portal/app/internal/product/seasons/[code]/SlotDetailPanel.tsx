@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { Button } from '@repo/ui/button'
+import { InlineSvg } from '@/components/product/InlineSvg'
 import type { SlotGridEntry } from './FilteredSlotGrid'
 import type { ColorOption } from './SlotColorPicker'
 import type { TaxonomyCategory, TaxonomyDimension } from './AddSlotDialog'
@@ -73,8 +74,10 @@ export function SlotDetailPanel({ slot, colorOptions: propColorOptions, editProp
   const [colorOptions, setColorOptions] = useState(propColorOptions)
   const [editOpen, setEditOpen] = useState(false)
   const [selectedColor, setSelectedColor] = useState<ColorDetailData | null>(null)
+  const [flatView, setFlatView] = useState<'front' | 'back'>('front')
 
   useEffect(() => { setColorOptions(propColorOptions) }, [propColorOptions])
+  useEffect(() => { setFlatView('front') }, [slot.id])
 
   const handleColorSaved = useCallback((updated: ColorDetailData) => {
     setColorOptions(prev => prev.map(c => {
@@ -140,6 +143,44 @@ export function SlotDetailPanel({ slot, colorOptions: propColorOptions, editProp
               Replacement
             </span>
           )}
+        </div>
+      </div>
+
+      {/* ─── Flat Preview ─────────────────────────────────────── */}
+      <div className="panel-section">
+        <div className="relative rounded-sm bg-[var(--depot-surface-alt)] overflow-hidden">
+          <div className="absolute right-2 top-2 z-10 inline-flex overflow-hidden rounded-sm border border-[var(--depot-hairline)] bg-white/90">
+            <button
+              type="button"
+              className={`px-2 py-1 text-[9px] uppercase tracking-wider ${
+                flatView === 'front'
+                  ? 'bg-[var(--depot-ink)] text-white'
+                  : 'text-[var(--depot-faint)]'
+              }`}
+              onClick={() => setFlatView('front')}
+            >
+              Front
+            </button>
+            <button
+              type="button"
+              className={`px-2 py-1 text-[9px] uppercase tracking-wider ${
+                flatView === 'back'
+                  ? 'bg-[var(--depot-ink)] text-white'
+                  : 'text-[var(--depot-faint)]'
+              }`}
+              onClick={() => setFlatView('back')}
+            >
+              Back
+            </button>
+          </div>
+          <div className="aspect-square w-full p-3">
+            <InlineSvg
+              src={flatView === 'front' ? slot.frontFlat : slot.backFlat}
+              alt={`${slot.productType.name} ${flatView} flat`}
+              className="w-full h-full"
+              hideLayers={['GRID', 'ANNOTATION']}
+            />
+          </div>
         </div>
       </div>
 

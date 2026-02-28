@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useDimensionFilter } from './DimensionFilterProvider'
 import { SlotDetailPanel } from './SlotDetailPanel'
 import { useShell } from '@/components/shell/ShellProvider'
+import { InlineSvg } from '@/components/product/InlineSvg'
 import type { TaxonomyCategory, TaxonomyDimension } from './AddSlotDialog'
 import type { ColorOption } from './SlotColorPicker'
 
@@ -12,6 +13,8 @@ import type { ColorOption } from './SlotColorPicker'
 
 export interface SlotGridEntry {
   id: string
+  frontFlat: string
+  backFlat: string
   status: string
   replacementFlag: boolean
   colorwayIds: string[]
@@ -71,6 +74,9 @@ const DIMENSION_LABELS: Record<string, string> = {
   ageGroup: 'Age',
 }
 
+const LIST_VIEW_COLUMNS =
+  '40px 56px minmax(160px,1fr) minmax(220px,1.1fr) 110px 90px minmax(190px,1fr) 130px'
+
 // ─── Component ──────────────────────────────────────────────────────
 
 interface FilteredSlotGridProps {
@@ -108,7 +114,12 @@ interface FilteredSlotGridProps {
 export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, editProps }: FilteredSlotGridProps) {
   const { filter, filteredSlotIds } = useDimensionFilter()
   const [selectedSlot, setSelectedSlot] = useState<SlotGridEntry | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const { setRightRailContent, setRightRailOpen, rightRailOpen } = useShell()
+  const colorById = useMemo(
+    () => new Map(colorOptions.map((color) => [color.id, color])),
+    [colorOptions],
+  )
 
   const isOpen = rightRailOpen && selectedSlot !== null
 
@@ -151,30 +162,61 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
       ) : (
         <>
           {/* Filter indicator */}
-          {isFiltered && (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-[10px] text-[var(--depot-faint)] uppercase tracking-wider">
-                Filtered by
-              </span>
-              <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-sm">
-                {DIMENSION_LABELS[filter.dimensionKey] ?? filter.dimensionKey}: {filterLabel}
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {isFiltered && (
+                <>
+                  <span className="text-[10px] text-[var(--depot-faint)] uppercase tracking-wider">
+                    Filtered by
+                  </span>
+                  <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-sm">
+                    {DIMENSION_LABELS[filter.dimensionKey] ?? filter.dimensionKey}: {filterLabel}
+                  </span>
+                </>
+              )}
               <span className="text-[10px] text-[var(--depot-faint)] tabular-nums">
                 {displaySlots.length} of {slots.length} slot{slots.length !== 1 ? 's' : ''}
               </span>
             </div>
-          )}
+            <div className="flex overflow-hidden rounded-sm border border-[var(--depot-hairline)]">
+              <button
+                type="button"
+                className={`px-2.5 py-1 text-[10px] uppercase tracking-wider ${
+                  viewMode === 'list'
+                    ? 'bg-[var(--depot-ink)] text-white'
+                    : 'bg-[var(--depot-surface)] text-[var(--depot-faint)]'
+                }`}
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 text-[10px] uppercase tracking-wider ${
+                  viewMode === 'grid'
+                    ? 'bg-[var(--depot-ink)] text-white'
+                    : 'bg-[var(--depot-surface)] text-[var(--depot-faint)]'
+                }`}
+                onClick={() => setViewMode('grid')}
+              >
+                Grid
+              </button>
+            </div>
+          </div>
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[760px]">
+          {viewMode === 'list' ? (
+            <div className="overflow-x-auto">
+              <div className="min-w-[1120px]">
               {/* Header */}
               <div
                 className="manifest-header"
-                style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
+                style={{ gridTemplateColumns: LIST_VIEW_COLUMNS }}
               >
                 <span>#</span>
+                <span>Flat</span>
                 <span>Collection</span>
                 <span>Product Type</span>
+                <span>Colors</span>
                 <span>Gender</span>
                 <span>Concept</span>
                 <span className="text-right">Status</span>
@@ -184,19 +226,36 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
               {displaySlots.map((slot, i) => {
                 const concept = slot.skuConcept
                 const snapshot = concept?.metadataSnapshot
+                const isSelected = selectedSlot?.id === slot.id && isOpen
+                const slotColors = slot.colorwayIds
+                  .map((colorId) => colorById.get(colorId))
+                  .filter((color): color is ColorOption => !!color)
 
                 return (
                   <button
                     key={slot.id}
                     type="button"
-                    className="manifest-row w-full text-left"
-                    style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
-                    data-selected={selectedSlot?.id === slot.id && isOpen}
+                    className={`manifest-row w-full text-left px-2 ${
+                      isSelected
+                        ? 'bg-[var(--depot-surface-alt)] outline outline-1 outline-[var(--depot-ink)]'
+                        : ''
+                    }`}
+                    style={{ gridTemplateColumns: LIST_VIEW_COLUMNS }}
+                    data-selected={isSelected}
                     onClick={() => openSlotDetail(slot)}
                   >
                     <span className="text-[11px] font-light text-[var(--depot-faint)] tabular-nums tracking-wider w-6">
                       {String(i + 1).padStart(2, '0')}
                     </span>
+
+                    <div className="w-10 h-10 rounded-sm bg-white overflow-hidden">
+                      <InlineSvg
+                        src={slot.frontFlat}
+                        alt={`${slot.productType.name} front flat`}
+                        className="w-full h-full p-1"
+                        hideLayers={['GRID', 'ANNOTATION']}
+                      />
+                    </div>
 
                     <div>
                       <p
@@ -219,6 +278,28 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
                         {slot.productType.subcategory.category.name} /{' '}
                         {slot.productType.subcategory.name}
                       </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1">
+                      {slotColors.length > 0 ? (
+                        <>
+                          {slotColors.slice(0, 6).map((color) => (
+                            <span
+                              key={color.id}
+                              className="h-3 w-3 rounded-[2px] border border-[var(--depot-hairline)]"
+                              style={{ backgroundColor: color.hex ?? '#e5e7eb' }}
+                              title={color.title}
+                            />
+                          ))}
+                          {slotColors.length > 6 && (
+                            <span className="text-[9px] text-[var(--depot-faint)] tabular-nums">
+                              +{slotColors.length - 6}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-[var(--depot-faint)]">—</span>
+                      )}
                     </div>
 
                     <p className="text-[11px] text-[var(--depot-ink-light)] tracking-wide">
@@ -257,7 +338,94 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
                 )
               })}
             </div>
-          </div>
+            </div>
+          ) : (
+            <div
+              className="grid gap-4 justify-center sm:justify-start"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 240px))' }}
+            >
+              {displaySlots.map((slot) => {
+                const concept = slot.skuConcept
+                const snapshot = concept?.metadataSnapshot
+                const isSelected = selectedSlot?.id === slot.id && isOpen
+                const slotColors = slot.colorwayIds
+                  .map((colorId) => colorById.get(colorId))
+                  .filter((color): color is ColorOption => !!color)
+
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    className={`pillar-block text-left p-3 transition-colors ${
+                      isSelected
+                        ? 'outline outline-1 outline-[var(--depot-ink)] bg-[var(--depot-surface-alt)]'
+                        : 'hover:border-[var(--depot-ink)]'
+                    }`}
+                    data-selected={isSelected}
+                    onClick={() => openSlotDetail(slot)}
+                  >
+                    <div className="aspect-square w-full rounded-sm bg-white overflow-hidden mb-3">
+                      <InlineSvg
+                        src={slot.frontFlat}
+                        alt={`${slot.productType.name} front flat`}
+                        className="w-full h-full p-2"
+                        hideLayers={['GRID', 'ANNOTATION']}
+                      />
+                    </div>
+                    <p className="manifest-name">{slot.productType.name}</p>
+                    <p className="text-[10px] text-[var(--depot-faint)] mt-0.5">
+                      {slot.collection?.name ?? 'Unassigned'} · {slot.audienceGender?.label ?? '—'}
+                    </p>
+                    <p className="text-[9px] text-[var(--depot-faint)] mt-1">
+                      {slot.productType.subcategory.category.name} / {slot.productType.subcategory.name}
+                    </p>
+                    {slotColors.length > 0 && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1">
+                        {slotColors.slice(0, 8).map((color) => (
+                          <span
+                            key={color.id}
+                            className="h-3.5 w-3.5 rounded-[2px] border border-[var(--depot-hairline)]"
+                            style={{ backgroundColor: color.hex ?? '#e5e7eb' }}
+                            title={color.title}
+                          />
+                        ))}
+                        {slotColors.length > 8 && (
+                          <span className="text-[9px] text-[var(--depot-faint)] tabular-nums">
+                            +{slotColors.length - 8}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-2">
+                      {concept && (
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${conceptStatusColors[concept.status] ?? ''}`}
+                        >
+                          {concept.status}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${slotStatusColors[slot.status] ?? ''}`}
+                      >
+                        {slot.status}
+                      </span>
+                    </div>
+                    {concept && (
+                      <div className="mt-2">
+                        <Link
+                          href={`/internal/product/concepts/${concept.id}`}
+                          className="text-[11px] text-[var(--depot-ink)] underline-offset-2 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(snapshot?.title as string) ?? 'Untitled Concept'}
+                        </Link>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </>
       )}
     </>

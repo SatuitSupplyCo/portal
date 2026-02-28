@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" fill="none">
+  <rect width="600" height="600" fill="#ffffff"/>
+  <rect x="100" y="100" width="400" height="400" rx="16" stroke="#1f2937" stroke-width="4"/>
+  <text x="300" y="285" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#111827">GENERIC PLACEHOLDER</text>
+  <text x="300" y="320" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#6b7280">BACK VIEW</text>
+  <text x="300" y="500" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#9ca3af">Replace with final flat SVG</text>
+</svg>

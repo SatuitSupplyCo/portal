@@ -25,6 +25,8 @@ import {
 } from '@repo/db/schema';
 import { eq, asc, sql, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 type ActionResult = { success: true; data?: unknown } | { success: false; error: string };
 
@@ -130,13 +132,97 @@ export async function createProductType(data: {
 }
 
 export async function updateProductType(id: string, data: {
+  code?: string;
   name?: string;
   status?: 'active' | 'deprecated';
   sortOrder?: number;
 }): Promise<ActionResult> {
   await requireAdmin();
-  await db.update(productTypes).set(data).where(eq(productTypes.id, id));
+  try {
+    const updateData = {
+      ...data,
+      code: data.code?.toLowerCase().replace(/\s+/g, '_'),
+    };
+    await db.update(productTypes).set(updateData).where(eq(productTypes.id, id));
+    revalidatePath('/internal/product/taxonomy');
+    return { success: true };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    if (msg.includes('unique')) return { success: false, error: 'A product type with that code already exists.' };
+    return { success: false, error: msg };
+  }
+}
+
+export async function uploadProductTypeFlats(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+
+  const productTypeId = String(formData.get('productTypeId') ?? '').trim();
+  if (!productTypeId) return { success: false, error: 'Product type is required.' };
+
+  const front = formData.get('front');
+  const back = formData.get('back');
+
+  const frontFile = front instanceof File ? front : null;
+  const backFile = back instanceof File ? back : null;
+
+  if ((!frontFile || frontFile.size === 0) && (!backFile || backFile.size === 0)) {
+    return { success: false, error: 'Upload at least one SVG file (front or back).' };
+  }
+
+  const pt = await db.query.productTypes.findFirst({
+    where: eq(productTypes.id, productTypeId),
+    columns: { id: true, code: true },
+  });
+  if (!pt) return { success: false, error: 'Product type not found.' };
+
+  const validFile = (file: File | null, side: 'front' | 'back') => {
+    if (!file || file.size === 0) return null;
+    const isSvgType = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+    if (!isSvgType) return `${side} must be an SVG file.`;
+    if (file.size > 5 * 1024 * 1024) return `${side} SVG exceeds 5MB limit.`;
+    return null;
+  };
+
+  const frontError = validFile(frontFile, 'front');
+  if (frontError) return { success: false, error: frontError };
+  const backError = validFile(backFile, 'back');
+  if (backError) return { success: false, error: backError };
+
+  const flatDir = path.join(
+    process.cwd(),
+    'public',
+    'product',
+    'placeholders',
+    'product-types',
+    pt.code,
+    'flats',
+  );
+  await mkdir(flatDir, { recursive: true });
+
+  const writes: Promise<void>[] = [];
+  if (frontFile && frontFile.size > 0) {
+    const frontSvg = await frontFile.text();
+    if (!frontSvg.includes('<svg')) {
+      return { success: false, error: 'Front file is not a valid SVG document.' };
+    }
+    writes.push(
+      writeFile(path.join(flatDir, `${pt.code}-flat-front.svg`), frontSvg, 'utf8'),
+    );
+  }
+  if (backFile && backFile.size > 0) {
+    const backSvg = await backFile.text();
+    if (!backSvg.includes('<svg')) {
+      return { success: false, error: 'Back file is not a valid SVG document.' };
+    }
+    writes.push(
+      writeFile(path.join(flatDir, `${pt.code}-flat-back.svg`), backSvg, 'utf8'),
+    );
+  }
+
+  await Promise.all(writes);
+
   revalidatePath('/internal/product/taxonomy');
+  revalidatePath('/internal/product');
   return { success: true };
 }
 
