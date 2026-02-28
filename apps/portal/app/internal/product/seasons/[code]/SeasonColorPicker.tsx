@@ -251,8 +251,8 @@ export function SeasonColorPicker({
       {expanded && (
         <div className="mt-4 rounded-lg border border-[var(--depot-border)] bg-card/50 overflow-hidden">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--depot-border)] bg-card">
-            <div>
+          <div className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[var(--depot-border)] bg-card">
+            <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--depot-ink)]">
                 Edit Palette
               </p>
@@ -269,7 +269,7 @@ export function SeasonColorPicker({
           </div>
 
           {/* Selection grid */}
-          <div className="px-5 py-4 space-y-5 max-h-[50vh] overflow-y-auto">
+          <div className="px-4 sm:px-5 py-4 space-y-5 max-h-[50vh] overflow-y-auto">
             {groups.map((group) => (
               <div key={group.label}>
                 <div className="mb-2">
@@ -351,7 +351,7 @@ export function SeasonColorPicker({
           </div>
 
           {/* Footer with save/cancel */}
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--depot-border)] bg-card">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 border-t border-[var(--depot-border)] bg-card">
             <p className="text-[10px] text-[var(--depot-faint)] tabular-nums">
               {selected.size} selected
               {hasChanges && (
@@ -362,8 +362,8 @@ export function SeasonColorPicker({
                 </span>
               )}
             </p>
-            {error && <p className="text-[10px] text-destructive">{error}</p>}
-            <div className="flex gap-2">
+            {error && <p className="text-[10px] text-destructive sm:ml-auto">{error}</p>}
+            <div className="flex gap-2 sm:justify-end">
               <Button
                 size="sm"
                 variant="outline"

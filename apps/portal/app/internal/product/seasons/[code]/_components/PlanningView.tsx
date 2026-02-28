@@ -59,7 +59,7 @@ export function PlanningView({
   glossary,
 }: PlanningViewProps) {
   return (
-    <section className="px-12 py-6 border-b border-[var(--depot-border)]">
+    <section className="px-4 sm:px-6 lg:px-12 py-6 border-b border-[var(--depot-border)]">
       <AssortmentMixSection
         dimensions={assortmentDimensions}
         totalSlots={activeSlotsCount}

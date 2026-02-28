@@ -152,7 +152,7 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
         <>
           {/* Filter indicator */}
           {isFiltered && (
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="text-[10px] text-[var(--depot-faint)] uppercase tracking-wider">
                 Filtered by
               </span>
@@ -165,95 +165,99 @@ export function FilteredSlotGrid({ slots, allDimensionLabels, colorOptions, edit
             </div>
           )}
 
-          {/* Header */}
-          <div
-            className="manifest-header"
-            style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
-          >
-            <span>#</span>
-            <span>Collection</span>
-            <span>Product Type</span>
-            <span>Gender</span>
-            <span>Concept</span>
-            <span className="text-right">Status</span>
-          </div>
-
-          {/* Rows */}
-          {displaySlots.map((slot, i) => {
-            const concept = slot.skuConcept
-            const snapshot = concept?.metadataSnapshot
-
-            return (
-              <button
-                key={slot.id}
-                type="button"
-                className="manifest-row w-full text-left"
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]">
+              {/* Header */}
+              <div
+                className="manifest-header"
                 style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
-                data-selected={selectedSlot?.id === slot.id && isOpen}
-                onClick={() => openSlotDetail(slot)}
               >
-                <span className="text-[11px] font-light text-[var(--depot-faint)] tabular-nums tracking-wider w-6">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
+                <span>#</span>
+                <span>Collection</span>
+                <span>Product Type</span>
+                <span>Gender</span>
+                <span>Concept</span>
+                <span className="text-right">Status</span>
+              </div>
 
-                <div>
-                  <p
-                    className={`manifest-name ${!slot.collection ? 'text-[var(--depot-faint)] italic' : ''}`}
+              {/* Rows */}
+              {displaySlots.map((slot, i) => {
+                const concept = slot.skuConcept
+                const snapshot = concept?.metadataSnapshot
+
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    className="manifest-row w-full text-left"
+                    style={{ gridTemplateColumns: 'auto 1fr 1fr auto auto auto' }}
+                    data-selected={selectedSlot?.id === slot.id && isOpen}
+                    onClick={() => openSlotDetail(slot)}
                   >
-                    {slot.collection ? slot.collection.name : 'Unassigned'}
-                  </p>
-                  {slot.replacementFlag && (
-                    <p className="text-[9px] text-amber-600 uppercase tracking-wider">
-                      Replacement
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-[11px] text-[var(--depot-ink-light)] tracking-wide">
-                    {slot.productType.name}
-                  </p>
-                  <p className="text-[9px] text-[var(--depot-faint)] tracking-wide">
-                    {slot.productType.subcategory.category.name} /{' '}
-                    {slot.productType.subcategory.name}
-                  </p>
-                </div>
-
-                <p className="text-[11px] text-[var(--depot-ink-light)] tracking-wide">
-                  {slot.audienceGender?.label ?? '—'}
-                </p>
-
-                <div>
-                  {concept ? (
-                    <Link
-                      href={`/internal/product/concepts/${concept.id}`}
-                      className="text-[11px] text-[var(--depot-ink)] underline-offset-2 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {(snapshot?.title as string) ?? 'Untitled Concept'}
-                    </Link>
-                  ) : (
-                    <span className="text-[11px] text-[var(--depot-faint)]">—</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 justify-end">
-                  {concept && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${conceptStatusColors[concept.status] ?? ''}`}
-                    >
-                      {concept.status}
+                    <span className="text-[11px] font-light text-[var(--depot-faint)] tabular-nums tracking-wider w-6">
+                      {String(i + 1).padStart(2, '0')}
                     </span>
-                  )}
-                  <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${slotStatusColors[slot.status] ?? ''}`}
-                  >
-                    {slot.status}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
+
+                    <div>
+                      <p
+                        className={`manifest-name ${!slot.collection ? 'text-[var(--depot-faint)] italic' : ''}`}
+                      >
+                        {slot.collection ? slot.collection.name : 'Unassigned'}
+                      </p>
+                      {slot.replacementFlag && (
+                        <p className="text-[9px] text-amber-600 uppercase tracking-wider">
+                          Replacement
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] text-[var(--depot-ink-light)] tracking-wide">
+                        {slot.productType.name}
+                      </p>
+                      <p className="text-[9px] text-[var(--depot-faint)] tracking-wide">
+                        {slot.productType.subcategory.category.name} /{' '}
+                        {slot.productType.subcategory.name}
+                      </p>
+                    </div>
+
+                    <p className="text-[11px] text-[var(--depot-ink-light)] tracking-wide">
+                      {slot.audienceGender?.label ?? '—'}
+                    </p>
+
+                    <div>
+                      {concept ? (
+                        <Link
+                          href={`/internal/product/concepts/${concept.id}`}
+                          className="text-[11px] text-[var(--depot-ink)] underline-offset-2 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(snapshot?.title as string) ?? 'Untitled Concept'}
+                        </Link>
+                      ) : (
+                        <span className="text-[11px] text-[var(--depot-faint)]">—</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 justify-end">
+                      {concept && (
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${conceptStatusColors[concept.status] ?? ''}`}
+                        >
+                          {concept.status}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${slotStatusColors[slot.status] ?? ''}`}
+                      >
+                        {slot.status}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </>
       )}
     </>

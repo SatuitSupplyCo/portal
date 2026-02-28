@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Label } from '@repo/ui/label'
@@ -24,6 +25,7 @@ interface AddItemDialogProps {
 }
 
 export function AddItemDialog({ title, onAdd, labelField, trigger }: AddItemDialogProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -44,6 +46,7 @@ export function AddItemDialog({ title, onAdd, labelField, trigger }: AddItemDial
       } else {
         setOpen(false)
         setError(null)
+        router.refresh()
       }
     })
   }

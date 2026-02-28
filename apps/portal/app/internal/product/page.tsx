@@ -132,7 +132,7 @@ export default async function AssortmentDashboardPage({
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="depot-heading text-xl">
               Assortment Dashboard
             </h1>
@@ -208,7 +208,7 @@ function AggregateView({
   return (
     <>
       {/* ─── KPI Strip ───────────────────────────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           <KpiCard label="Active SKUs" value={totalActiveSkus} />
           <KpiCard label="SKU Cap" value={totalSkuCap} />
@@ -220,7 +220,7 @@ function AggregateView({
       </section>
 
       {/* ─── Collection Mix ──────────────────────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <p className="depot-label mb-6">Collection Mix</p>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {Object.entries(COLLECTION_LABELS).map(([key, label]) => {
@@ -247,7 +247,7 @@ function AggregateView({
       </section>
 
       {/* ─── Season Cards ────────────────────────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <p className="depot-label mb-6">Seasons</p>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -384,8 +384,8 @@ function SeasonScopedView({
   return (
     <>
       {/* ─── Season Header Badge ─────────────────────────────── */}
-      <div className="px-12 py-4 border-b border-[var(--depot-border)] bg-[var(--depot-surface-alt)]">
-        <div className="flex items-center gap-3">
+      <div className="px-4 sm:px-6 lg:px-12 py-4 border-b border-[var(--depot-border)] bg-[var(--depot-surface-alt)]">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="depot-subheading text-sm" style={{ marginBottom: 0 }}>{season.name}</p>
           <span className={`text-[10px] px-2 py-0.5 rounded-sm font-medium uppercase tracking-wider ${seasonStatusColors[season.status] ?? ''}`}>
             {season.status}
@@ -395,7 +395,7 @@ function SeasonScopedView({
           </span>
           <Link
             href={`/internal/product/seasons/${season.code}`}
-            className="ml-auto text-[10px] tracking-wider uppercase text-[var(--depot-muted)] hover:text-[var(--depot-ink)] transition-colors"
+            className="w-full sm:w-auto sm:ml-auto text-[10px] tracking-wider uppercase text-[var(--depot-muted)] hover:text-[var(--depot-ink)] transition-colors"
           >
             Season Detail
           </Link>
@@ -403,7 +403,7 @@ function SeasonScopedView({
       </div>
 
       {/* ─── Season-Scoped KPIs ──────────────────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
           <KpiCard label="Target SKUs" value={season.targetSkuCount} />
           <KpiCard label="Filled" value={filledSlots.length} />
@@ -419,7 +419,7 @@ function SeasonScopedView({
       </section>
 
       {/* ─── Collection Mix (Season-Scoped) ──────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <p className="depot-label mb-6">Collection Mix</p>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {Object.entries(COLLECTION_LABELS).map(([key, label]) => {
@@ -446,7 +446,7 @@ function SeasonScopedView({
       </section>
 
       {/* ─── Pipeline Table ──────────────────────────────────── */}
-      <section className="px-12 py-8 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
         <div className="flex items-center justify-between mb-6">
           <p className="depot-label" style={{ marginBottom: 0 }}>Pipeline</p>
           <span className="text-[9px] uppercase tracking-wider text-[var(--depot-faint)] bg-[var(--depot-surface-alt)] px-2 py-0.5 rounded-sm">
@@ -461,64 +461,66 @@ function SeasonScopedView({
             </p>
           </div>
         ) : (
-          <>
-            {/* Table header */}
-            <div
-              className="manifest-header"
-              style={{ gridTemplateColumns: "1fr auto auto auto auto auto auto" }}
-            >
-              <span>Concept</span>
-              <span>Collection</span>
-              <span>Status</span>
-              <span className="text-right text-[var(--depot-faint)]">Forecast</span>
-              <span className="text-right text-[var(--depot-faint)]">Produced</span>
-              <span className="text-right text-[var(--depot-faint)]">Sold</span>
-              <span className="text-right text-[var(--depot-faint)]">Remaining</span>
-            </div>
-
-            {/* Rows */}
-            {concepts.map((concept) => (
-              <Link
-                key={concept.id}
-                href={`/internal/product/concepts/${concept.id}`}
-                className="block"
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]">
+              {/* Table header */}
+              <div
+                className="manifest-header"
+                style={{ gridTemplateColumns: "1fr auto auto auto auto auto auto" }}
               >
-                <div
-                  className="manifest-row group"
-                  style={{ gridTemplateColumns: "1fr auto auto auto auto auto auto" }}
+                <span>Concept</span>
+                <span>Collection</span>
+                <span>Status</span>
+                <span className="text-right text-[var(--depot-faint)]">Forecast</span>
+                <span className="text-right text-[var(--depot-faint)]">Produced</span>
+                <span className="text-right text-[var(--depot-faint)]">Sold</span>
+                <span className="text-right text-[var(--depot-faint)]">Remaining</span>
+              </div>
+
+              {/* Rows */}
+              {concepts.map((concept) => (
+                <Link
+                  key={concept.id}
+                  href={`/internal/product/concepts/${concept.id}`}
+                  className="block"
                 >
-                  {/* Concept name + product type */}
-                  <div className="min-w-0">
-                    <p className="manifest-name group-hover:text-[var(--depot-ink-light)] transition-colors truncate">
-                      {concept.title}
-                    </p>
-                    <p className="text-[10px] text-[var(--depot-faint)]">
-                      {concept.productTypeName}
-                      {concept.replacementFlag && (
-                        <span className="ml-1 text-amber-600">replacement</span>
-                      )}
-                    </p>
+                  <div
+                    className="manifest-row group"
+                    style={{ gridTemplateColumns: "1fr auto auto auto auto auto auto" }}
+                  >
+                    {/* Concept name + product type */}
+                    <div className="min-w-0">
+                      <p className="manifest-name group-hover:text-[var(--depot-ink-light)] transition-colors truncate">
+                        {concept.title}
+                      </p>
+                      <p className="text-[10px] text-[var(--depot-faint)]">
+                        {concept.productTypeName}
+                        {concept.replacementFlag && (
+                          <span className="ml-1 text-amber-600">replacement</span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Collection */}
+                    <span className="text-[11px] text-[var(--depot-ink-light)] capitalize">
+                      {COLLECTION_LABELS[concept.collection] ?? concept.collection}
+                    </span>
+
+                    {/* Status badge */}
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${conceptStatusColors[concept.status] ?? ''}`}>
+                      {conceptStatusLabels[concept.status] ?? concept.status}
+                    </span>
+
+                    {/* Placeholder inventory columns */}
+                    <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
+                    <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
+                    <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
+                    <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
                   </div>
-
-                  {/* Collection */}
-                  <span className="text-[11px] text-[var(--depot-ink-light)] capitalize">
-                    {COLLECTION_LABELS[concept.collection] ?? concept.collection}
-                  </span>
-
-                  {/* Status badge */}
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-sm font-medium uppercase tracking-wider ${conceptStatusColors[concept.status] ?? ''}`}>
-                    {conceptStatusLabels[concept.status] ?? concept.status}
-                  </span>
-
-                  {/* Placeholder inventory columns */}
-                  <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
-                  <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
-                  <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
-                  <span className="text-[11px] text-right text-[var(--depot-faint)]/40 tabular-nums">—</span>
-                </div>
-              </Link>
-            ))}
-          </>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
@@ -547,7 +549,7 @@ function KpiCard({ label, value }: { label: string; value: string | number }) {
 
 function CoreProgramsSection({ programs }: { programs: CoreProgram[] }) {
   return (
-    <section className="px-12 py-8">
+    <section className="px-4 sm:px-6 lg:px-12 py-8">
       <div className="flex items-center justify-between mb-6">
         <p className="depot-label" style={{ marginBottom: 0 }}>Evergreen Programs</p>
         <Link

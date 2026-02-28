@@ -166,7 +166,7 @@ export default async function SeasonDetailPage({
             />
           )}
 
-          <section className="px-12 py-6 border-b border-[var(--depot-border)]">
+          <section className="px-4 sm:px-6 lg:px-12 py-6 border-b border-[var(--depot-border)]">
             <SeasonColorPicker
               seasonId={season.id}
               seasonName={season.name}
@@ -180,8 +180,8 @@ export default async function SeasonDetailPage({
             />
           </section>
 
-          <section className="px-12 py-8 border-b border-[var(--depot-border)]">
-            <div className="flex items-center justify-between mb-6">
+          <section className="px-4 sm:px-6 lg:px-12 py-8 border-b border-[var(--depot-border)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
               <p className="depot-label flex items-center gap-1.5" style={{ marginBottom: 0 }}>
                 Season Slots
                 <InfoTooltip slug="season-slot" glossary={glossary} />
@@ -244,7 +244,7 @@ export default async function SeasonDetailPage({
         </DimensionFilterProvider>
 
         {data.coreRefs.length > 0 && (
-          <section className="px-12 py-8">
+          <section className="px-4 sm:px-6 lg:px-12 py-8">
             <p className="depot-label mb-6 flex items-center gap-1.5">
               Evergreen Programs
               <InfoTooltip slug="core-program" glossary={glossary} />

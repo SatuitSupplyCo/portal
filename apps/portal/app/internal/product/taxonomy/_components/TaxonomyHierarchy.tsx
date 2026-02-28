@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -64,6 +64,10 @@ export function TaxonomyHierarchy({ hierarchy: initialHierarchy }: { hierarchy: 
     id: string
     name: string
   } | null>(null)
+
+  useEffect(() => {
+    setHierarchy(initialHierarchy)
+  }, [initialHierarchy])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })

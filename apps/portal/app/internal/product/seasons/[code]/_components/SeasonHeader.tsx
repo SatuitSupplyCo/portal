@@ -47,7 +47,7 @@ export function SeasonHeader({
 }: SeasonHeaderProps) {
   return (
     <div className="depot-header">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex flex-wrap items-center gap-3 mb-3">
         <h1 className="depot-heading text-xl">{season.name}</h1>
         <span
           className={`text-[10px] px-2 py-0.5 rounded-sm font-medium uppercase tracking-wider ${seasonStatusColors[season.status] ?? ""}`}
@@ -61,7 +61,7 @@ export function SeasonHeader({
 
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 lg:gap-12">
         <div>
-          <div className="flex items-center gap-3 text-xs font-light text-[var(--depot-muted)] tracking-wide mb-4">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-light text-[var(--depot-muted)] tracking-wide mb-4">
             <span>{season.code}</span>
             {season.launchDate && (
               <>

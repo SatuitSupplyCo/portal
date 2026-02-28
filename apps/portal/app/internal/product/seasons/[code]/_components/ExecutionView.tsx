@@ -32,7 +32,7 @@ export function ExecutionView({
 }: ExecutionViewProps) {
   return (
     <>
-      <section className="px-12 py-6 border-b border-[var(--depot-border)]">
+      <section className="px-4 sm:px-6 lg:px-12 py-6 border-b border-[var(--depot-border)]">
         <div className="grid grid-cols-3 md:grid-cols-6 gap-6">
           <MetricBlock
             label="Target Slots"
@@ -56,7 +56,7 @@ export function ExecutionView({
       </section>
 
       {(Object.keys(collectionMix).length > 0 || unassignedCount > 0) && (
-        <section className="px-12 py-6 border-b border-[var(--depot-border)]">
+        <section className="px-4 sm:px-6 lg:px-12 py-6 border-b border-[var(--depot-border)]">
           <p className="depot-label mb-4 flex items-center gap-1.5">
             Collection Mix
             <InfoTooltip slug="collection-mix" glossary={glossary} />

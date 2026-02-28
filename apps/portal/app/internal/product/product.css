@@ -478,8 +478,20 @@
 .depot-header {
   border-bottom: 2px solid var(--depot-ink);
   background: var(--depot-surface);
-  padding: 32px 48px;
+  padding: 24px 16px;
   position: relative;
+}
+
+@media (min-width: 640px) {
+  .depot-header {
+    padding: 28px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .depot-header {
+    padding: 32px 48px;
+  }
 }
 
 .depot-header::before {

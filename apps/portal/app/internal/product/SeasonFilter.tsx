@@ -25,45 +25,47 @@ export function SeasonFilter({ seasons }: { seasons: SeasonOption[] }) {
   }
 
   return (
-    <div className="flex items-center gap-2 px-12 py-4 border-b border-[var(--depot-border)]">
-      <span className="text-[10px] uppercase tracking-wider text-[var(--depot-faint)] mr-2">
-        Filter
-      </span>
+    <div className="px-4 sm:px-6 lg:px-12 py-4 border-b border-[var(--depot-border)] overflow-x-auto">
+      <div className="flex items-center gap-2 min-w-max">
+        <span className="text-[10px] uppercase tracking-wider text-[var(--depot-faint)] mr-2">
+          Filter
+        </span>
 
-      {/* "All" pill */}
-      <button
-        type="button"
-        onClick={() => select('')}
-        className={cn(
-          'px-3 py-1 text-[11px] tracking-[0.04em] rounded-sm transition-colors',
-          active === ''
-            ? 'bg-[var(--depot-ink)] text-white font-medium'
-            : 'bg-[var(--depot-surface-alt)] text-[var(--depot-muted)] hover:text-[var(--depot-ink)] hover:bg-[var(--depot-surface-alt)]',
-        )}
-      >
-        All Seasons
-      </button>
-
-      {/* Season pills */}
-      {seasons.map((s) => (
+        {/* "All" pill */}
         <button
-          key={s.code}
           type="button"
-          onClick={() => select(s.code)}
+          onClick={() => select('')}
           className={cn(
-            'px-3 py-1 text-[11px] tracking-[0.04em] rounded-sm transition-colors',
-            active === s.code
+            'px-3 py-1 text-[11px] tracking-[0.04em] rounded-sm transition-colors whitespace-nowrap',
+            active === ''
               ? 'bg-[var(--depot-ink)] text-white font-medium'
               : 'bg-[var(--depot-surface-alt)] text-[var(--depot-muted)] hover:text-[var(--depot-ink)] hover:bg-[var(--depot-surface-alt)]',
           )}
-          title={s.name}
         >
-          {s.code}
-          <span className="ml-1 text-[9px] opacity-60">
-            {s.seasonType === 'minor' ? 'drop' : ''}
-          </span>
+          All Seasons
         </button>
-      ))}
+
+        {/* Season pills */}
+        {seasons.map((s) => (
+          <button
+            key={s.code}
+            type="button"
+            onClick={() => select(s.code)}
+            className={cn(
+              'px-3 py-1 text-[11px] tracking-[0.04em] rounded-sm transition-colors whitespace-nowrap',
+              active === s.code
+                ? 'bg-[var(--depot-ink)] text-white font-medium'
+                : 'bg-[var(--depot-surface-alt)] text-[var(--depot-muted)] hover:text-[var(--depot-ink)] hover:bg-[var(--depot-surface-alt)]',
+            )}
+            title={s.name}
+          >
+            {s.code}
+            <span className="ml-1 text-[9px] opacity-60">
+              {s.seasonType === 'minor' ? 'drop' : ''}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
