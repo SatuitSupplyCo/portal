@@ -96,6 +96,7 @@ export function ProductTypeDetailDialog({
   }, [backFile])
 
   if (!productType) return null
+  const currentProductType = productType
 
   function handleSave() {
     setError(null)
@@ -103,8 +104,9 @@ export function ProductTypeDetailDialog({
       setError('Name is required.')
       return
     }
+    const productTypeId = currentProductType.id
     startTransition(async () => {
-      const result = await onSave(productType.id, {
+      const result = await onSave(productTypeId, {
         name: name.trim(),
         status,
         sortOrder,
@@ -117,7 +119,7 @@ export function ProductTypeDetailDialog({
 
       if (frontFile || backFile) {
         const fd = new FormData()
-        fd.set('productTypeId', productType.id)
+        fd.set('productTypeId', productTypeId)
         if (frontFile) fd.set('front', frontFile)
         if (backFile) fd.set('back', backFile)
 
