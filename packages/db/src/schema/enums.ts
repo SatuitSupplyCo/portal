@@ -218,6 +218,22 @@ export const studioLinkTypeEnum = pgEnum('studio_link_type', [
   'collection',
 ]);
 
+export const conceptJobStatusEnum = pgEnum('concept_job_status', [
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+export const renderJobStatusEnum = pgEnum('render_job_status', [
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
 // ─── Product Taxonomy ───────────────────────────────────────────────
 
 export const taxonomyStatusEnum = pgEnum('taxonomy_status', [

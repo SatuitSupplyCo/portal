@@ -15,3 +15,8 @@ const bedrock = createAmazonBedrock({
 })
 
 export const insightModel = bedrock('us.anthropic.claude-3-5-sonnet-20241022-v2:0')
+
+/** Returns a Bedrock model by id (e.g. for concepting with CONCEPTING_MODEL_ID). */
+export function getModel(modelId: string) {
+  return bedrock(modelId)
+}

@@ -59,6 +59,8 @@ import {
 } from './lifecycle';
 import { brandContext } from './brand';
 import { aiSuggestionLog } from './ai';
+import { conceptJobs, conceptJobAcceptances } from './concepting';
+import { studioDesignVersions, renderJobs } from './design';
 import { documentsAcl, packsAcl, assetsAcl } from './permissions';
 import {
   permissions,
@@ -89,6 +91,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   packs: many(packs),
   tests: many(tests),
   publishLogs: many(publishLog),
+  conceptJobs: many(conceptJobs),
+  conceptJobAcceptances: many(conceptJobAcceptances),
+  studioDesignVersions: many(studioDesignVersions),
+  renderJobs: many(renderJobs),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -532,6 +538,9 @@ export const studioEntriesRelations = relations(
     links: many(studioEntryLinks),
     skuConcepts: many(skuConcepts),
     seasonColors: many(seasonColors),
+    conceptAcceptances: many(conceptJobAcceptances),
+    designVersions: many(studioDesignVersions),
+    renderJobs: many(renderJobs),
   }),
 );
 
@@ -848,5 +857,63 @@ export const aiSuggestionLogRelations = relations(aiSuggestionLog, ({ one }) => 
   user: one(users, {
     fields: [aiSuggestionLog.userId],
     references: [users.id],
+  }),
+}));
+
+export const conceptJobsRelations = relations(conceptJobs, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [conceptJobs.createdBy],
+    references: [users.id],
+  }),
+  acceptances: many(conceptJobAcceptances),
+}));
+
+export const conceptJobAcceptancesRelations = relations(
+  conceptJobAcceptances,
+  ({ one }) => ({
+    conceptJob: one(conceptJobs, {
+      fields: [conceptJobAcceptances.conceptJobId],
+      references: [conceptJobs.id],
+    }),
+    studioEntry: one(studioEntries, {
+      fields: [conceptJobAcceptances.studioEntryId],
+      references: [studioEntries.id],
+    }),
+    accepter: one(users, {
+      fields: [conceptJobAcceptances.acceptedBy],
+      references: [users.id],
+    }),
+  }),
+);
+
+// ─── Design relations ───────────────────────────────────────────────
+
+export const studioDesignVersionsRelations = relations(
+  studioDesignVersions,
+  ({ one, many }) => ({
+    studioEntry: one(studioEntries, {
+      fields: [studioDesignVersions.studioEntryId],
+      references: [studioEntries.id],
+    }),
+    creator: one(users, {
+      fields: [studioDesignVersions.createdBy],
+      references: [users.id],
+    }),
+    renderJobs: many(renderJobs),
+  }),
+);
+
+export const renderJobsRelations = relations(renderJobs, ({ one }) => ({
+  creator: one(users, {
+    fields: [renderJobs.createdBy],
+    references: [users.id],
+  }),
+  studioEntry: one(studioEntries, {
+    fields: [renderJobs.studioEntryId],
+    references: [studioEntries.id],
+  }),
+  designVersion: one(studioDesignVersions, {
+    fields: [renderJobs.designVersionId],
+    references: [studioDesignVersions.id],
   }),
 }));

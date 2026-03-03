@@ -24,9 +24,36 @@ env:
   TASK_FAMILY: satuit-prod-portal
 
 jobs:
+  validate:
+    name: Validate Portal Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck portal
+        run: pnpm -C apps/portal exec tsc --noEmit
+
+      - name: Run portal tests
+        run: pnpm -C apps/portal test
+
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
+    needs: validate
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
       migrate_tag: ${{ steps.meta.outputs.migrate_tag }}

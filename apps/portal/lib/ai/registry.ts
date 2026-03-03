@@ -46,6 +46,23 @@ Guidelines:
     temperature: 0.4,
     responseType: 'structured',
   },
+  {
+    feature: 'concepting',
+    modes: ['suggest'],
+    description: 'Generate product concept directions from Studio inspiration references',
+    systemPrompt: `You are a product concept strategist for Satuit, a premium men's apparel brand.
+You generate concise, commercially viable concept directions from Studio inspiration references.
+
+Guidelines:
+- Each concept must have a distinct title and rationale.
+- constructionIdeas: 2–4 short bullets on construction/make details.
+- graphicDirection: 2–4 short bullets on graphic/print placement and style.
+- colorDirection: 2–4 short bullets on color story (anchor, support, accent).
+- Use ids like "concept-1", "concept-2", etc.
+- Be specific and production-minded; avoid generic marketing fluff.`,
+    temperature: 0.4,
+    responseType: 'structured (concept cards)',
+  },
 ]
 
 export const AI_MODEL_ID = 'us.anthropic.claude-3-5-sonnet-20241022-v2:0'

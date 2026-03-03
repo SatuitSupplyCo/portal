@@ -22,6 +22,7 @@ import {
   factoryCosting,
   skuFactoryAssignments,
   productTypes,
+  studioDesignVersions,
 } from '@repo/db/schema';
 import { eq, and, count, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -144,6 +145,16 @@ export async function promoteToConcept(
   }
 
   const techFlats = getDefaultTechFlatsForProductType(slot.productType.code);
+  const latestDesignVersion = await db.query.studioDesignVersions.findFirst({
+    where: (v, { eq: eqFn }) => eqFn(v.studioEntryId, entryId),
+    orderBy: (v, { desc: descFn }) => [descFn(v.version)],
+    columns: {
+      id: true,
+      version: true,
+      snapshotJson: true,
+      createdAt: true,
+    },
+  });
 
   // Snapshot structured data at promotion time
   const metadataSnapshot = {
@@ -162,6 +173,14 @@ export async function promoteToConcept(
     categoryMetadata: entry.categoryMetadata,
     productTypeCode: slot.productType.code,
     techFlats,
+    designVersion: latestDesignVersion
+      ? {
+          id: latestDesignVersion.id,
+          version: latestDesignVersion.version,
+          createdAt: latestDesignVersion.createdAt.toISOString(),
+        }
+      : null,
+    designSnapshot: latestDesignVersion?.snapshotJson ?? null,
   };
 
   // Create concept

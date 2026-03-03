@@ -115,6 +115,12 @@ export const productTypes = pgTable(
       .notNull()
       .references(() => productSubcategories.id, { onDelete: 'cascade' }),
 
+    /**
+     * Ordered design/render surfaces for this product type.
+     * Example: ["front","back"] or ["front","back","top","bottom","left_side","right_side"].
+     */
+    sides: jsonb('sides').$type<string[]>().notNull().default(['front', 'back']),
+
     sortOrder: integer('sort_order').notNull().default(0),
     status: taxonomyStatusEnum('status').notNull().default('active'),
     taxonomyVersion: text('taxonomy_version').default('v1.0'),

@@ -17,4 +17,6 @@ export * from './rbac';
 export * from './audit';
 export * from './glossary';
 export * from './ai';
+export * from './concepting';
+export * from './design';
 export * from './relations';

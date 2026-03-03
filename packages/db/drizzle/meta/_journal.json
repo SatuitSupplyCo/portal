@@ -64,6 +64,20 @@
       "when": 1771595059881,
       "tag": "0008_add_ai_token_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1772399895620,
+      "tag": "0009_free_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1772420790000,
+      "tag": "0010_add_product_type_sides",
+      "breakpoints": true
     }
   ]
 }

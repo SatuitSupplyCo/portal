@@ -6,6 +6,9 @@ import {
   Waves,
   BookMarked,
   Archive,
+  Lightbulb,
+  PenTool,
+  ClipboardCheck,
 } from "lucide-react"
 
 import type { SidebarSection } from "@/components/shell/SectionSidebar"
@@ -24,6 +27,12 @@ export const studioSections: SidebarSection[] = [
     description: "Silhouette and construction exploration",
   },
   {
+    title: "Design",
+    href: "/internal/studio/design",
+    icon: PenTool,
+    description: "Garment design and placement editor",
+  },
+  {
     title: "Materials",
     href: "/internal/studio/materials",
     icon: Scissors,
@@ -34,6 +43,18 @@ export const studioSections: SidebarSection[] = [
     href: "/internal/studio/color",
     icon: Pipette,
     description: "Palette exploration and seasonal color direction",
+  },
+  {
+    title: "Concepting",
+    href: "/internal/studio/concepting",
+    icon: Lightbulb,
+    description: "AI-assisted brainstorming from Studio inspiration",
+  },
+  {
+    title: "QA",
+    href: "/internal/studio/qa",
+    icon: ClipboardCheck,
+    description: "Smoke-test checklist for Studio rollout",
   },
   {
     title: "Brand",
